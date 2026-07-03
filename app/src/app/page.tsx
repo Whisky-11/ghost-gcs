@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useTelemetry } from '@/hooks/useTelemetry'
 import { AttitudeIndicator } from '@/components/instruments/AttitudeIndicator'
@@ -7,15 +8,71 @@ import { Hsi } from '@/components/instruments/Hsi'
 import { StatusChips } from '@/components/instruments/StatusChips'
 import { Tapes } from '@/components/instruments/Tapes'
 import { FlightControls } from '@/components/FlightControls'
+import { MissionControls } from '@/components/MissionControls'
+import { AlertsPanel } from '@/components/AlertsPanel'
+import { GhostPanel, type GhostAiMethod } from '@/components/GhostPanel'
 import { Toasts } from '@/components/Toasts'
+import type { LatLng, Mission, MissionItem, RpcParams } from '@/lib/types'
 
 // maplibre-gl touches window/document at module load — must stay client-only
 // (ssr:false requires the dynamic() call to live in a Client Component, per
 // Next 15/16's app router rules, hence this whole page is 'use client').
 const VehicleMap = dynamic(() => import('@/components/VehicleMap'), { ssr: false })
 
+const EMPTY_MISSION: Mission = { items: [] }
+
 export default function Home() {
-  const { state, wsStatus, rpc } = useTelemetry()
+  const { state, wsStatus, alerts, rpc } = useTelemetry()
+
+  // Mission editor state lives inside VehicleMap (Task 8); onMissionChange is
+  // its escape hatch for observing the built mission up here, where
+  // MissionControls needs it to gate upload/start/clear (Task 9).
+  const [mission, setMission] = useState<Mission>(EMPTY_MISSION)
+  // Client-tracked: true only after a successful uploadMission rpc. Any
+  // further edit to the mission (add/remove/reorder/generate-survey/local
+  // clear in the editor panel) invalidates it — the vehicle's currently
+  // uploaded mission may no longer match what's shown in the editor.
+  const [missionUploaded, setMissionUploaded] = useState(false)
+
+  const handleMissionChange = useCallback((next: Mission) => {
+    setMission(next)
+    setMissionUploaded(false)
+  }, [])
+
+  // Task 10: GHOST advisory panel state, lifted here so it can talk to both
+  // VehicleMap (for map rendering) and GhostPanel (which produces it) —
+  // neither of them is an ancestor/descendant of the other.
+  //
+  // Current in-progress survey polygon, mirrored up from VehicleMap's
+  // editor state — GhostPanel needs it to build "draft from drawing"'s
+  // geometry.
+  const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
+  // GHOST's current mission-draft preview (dashed overlay) — set by
+  // GhostPanel whenever its draft request resolves/clears, consumed by
+  // VehicleMap's GhostDraftOverlay.
+  const [draftPreviewItems, setDraftPreviewItems] = useState<MissionItem[]>([])
+  // GHOST's "Load into editor" request — a PURE LOCAL MUTATION (never an
+  // rpc call): GhostPanel calls onLoadIntoEditor with the draft's items,
+  // this wraps them with a fresh requestId, and VehicleMap dispatches
+  // `setMissionItems` into its own editor reducer on receiving a new one.
+  // AI never uploads (spec safety invariant 1) — the human then reviews +
+  // uploads the loaded mission via MissionControls below, same as any
+  // manually-built or survey-generated mission.
+  const [loadMissionRequest, setLoadMissionRequest] = useState<{ items: MissionItem[]; requestId: string } | null>(null)
+
+  const handleLoadDraftIntoEditor = useCallback((items: MissionItem[]) => {
+    setLoadMissionRequest({ items, requestId: crypto.randomUUID() })
+  }, [])
+
+  // M1 hardening (Task 11, carried from Task 10 review): narrow `rpc`'s type
+  // before it reaches GhostPanel so the AI-never-commands invariant is
+  // enforced by the compiler, not just by convention. `rpc` itself is still
+  // the full RpcMethod-accepting function (FlightControls/MissionControls/
+  // AlertsPanel below all still use it unnarrowed) — this wrapper is a
+  // structural subtype restriction applied only at GhostPanel's boundary.
+  // Calling aiRpc('uploadMission', ...) or aiRpc('arm') is a compile error:
+  // GhostAiMethod excludes every command/mission-mutating RpcMethod.
+  const aiRpc = useCallback(<T = void,>(method: GhostAiMethod, params?: RpcParams): Promise<T> => rpc<T>(method, params), [rpc])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -43,7 +100,14 @@ export default function Home() {
       </header>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-          <VehicleMap state={state} />
+          <VehicleMap
+            state={state}
+            rpc={rpc}
+            onMissionChange={handleMissionChange}
+            onPolygonPointsChange={setPolygonPoints}
+            draftPreviewItems={draftPreviewItems}
+            loadMissionRequest={loadMissionRequest}
+          />
         </div>
         <aside
           style={{
@@ -64,6 +128,21 @@ export default function Home() {
           </div>
           <Tapes relAltM={state?.position?.relAltM ?? null} groundMps={state?.speed?.groundMps ?? null} />
           <FlightControls state={state} rpc={rpc} />
+          <MissionControls
+            state={state}
+            mission={mission}
+            missionUploaded={missionUploaded}
+            onMissionUploadedChange={setMissionUploaded}
+            rpc={rpc}
+          />
+          <AlertsPanel alerts={alerts} rpc={rpc} />
+          <GhostPanel
+            aiRpc={aiRpc}
+            polygonPoints={polygonPoints}
+            mission={mission}
+            onDraftItemsChange={setDraftPreviewItems}
+            onLoadIntoEditor={handleLoadDraftIntoEditor}
+          />
         </aside>
       </div>
       <Toasts />

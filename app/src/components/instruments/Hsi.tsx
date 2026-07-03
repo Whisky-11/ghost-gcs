@@ -7,6 +7,19 @@ const SIZE = 180
 const CENTER = SIZE / 2
 const RADIUS = CENTER - 14
 
+// Math.sin/Math.cos are only guaranteed to be *correctly rounded* in the
+// last bit by no spec — different engine builds (Node's V8 vs the browser's
+// V8, sometimes even different CPU codepaths) can disagree in the last 1-2
+// ULPs of a transcendental result. At full float precision that shows up as
+// a React hydration mismatch (`x1={29.378221735089312}` server vs
+// `29.378221735089305` client) even though yaw is 0 on both sides pre-mount.
+// Rounding every trig-derived coordinate to millimeter precision (3 decimal
+// places at this SVG's scale) is far below anything visible and reliably
+// produces the identical string both sides serialize.
+function round(n: number): number {
+  return Math.round(n * 1000) / 1000
+}
+
 const CARDINALS: Array<{ label: string; deg: number }> = [
   { label: 'N', deg: 0 },
   { label: 'E', deg: 90 },
@@ -30,16 +43,16 @@ export function Hsi({ yawDeg }: HsiProps) {
           {/* Minor ticks every 30deg */}
           {Array.from({ length: 12 }, (_, i) => i * 30).map((deg) => {
             const rad = (deg * Math.PI) / 180
-            const x1 = CENTER + Math.sin(rad) * (RADIUS - 6)
-            const y1 = CENTER - Math.cos(rad) * (RADIUS - 6)
-            const x2 = CENTER + Math.sin(rad) * RADIUS
-            const y2 = CENTER - Math.cos(rad) * RADIUS
+            const x1 = round(CENTER + Math.sin(rad) * (RADIUS - 6))
+            const y1 = round(CENTER - Math.cos(rad) * (RADIUS - 6))
+            const x2 = round(CENTER + Math.sin(rad) * RADIUS)
+            const y2 = round(CENTER - Math.cos(rad) * RADIUS)
             return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--fg-dim)" strokeWidth={1} />
           })}
           {CARDINALS.map(({ label, deg }) => {
             const rad = (deg * Math.PI) / 180
-            const x = CENTER + Math.sin(rad) * (RADIUS - 18)
-            const y = CENTER - Math.cos(rad) * (RADIUS - 18)
+            const x = round(CENTER + Math.sin(rad) * (RADIUS - 18))
+            const y = round(CENTER - Math.cos(rad) * (RADIUS - 18))
             return (
               <text
                 key={label}

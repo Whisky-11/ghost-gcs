@@ -128,6 +128,7 @@ export function makeCommands(deps: CommandDeps): {
   setMode(mode: string): Promise<void>
   takeoff(altM: number): Promise<void>
   rtl(): Promise<void>
+  startMission(): Promise<void>
 } {
   async function arm(): Promise<void> {
     assertConnected(deps)
@@ -172,5 +173,31 @@ export function makeCommands(deps: CommandDeps): {
     await setMode('RTL')
   }
 
-  return { arm, disarm, setMode, takeoff, rtl }
+  /** Starts a previously-uploaded mission by switching to AUTO. Requires
+   * connected + (copter: armed first). Mission upload + arming (and, for
+   * copter, an explicit GUIDED takeoff — see below) are the caller's job —
+   * no chaining here (spec: sequencing is done by the app over separate
+   * RPCs, not the bridge; see the P1 arm-ACK-vs-state lesson: wait for
+   * TELEMETRY-confirmed armed=true, not just the arm COMMAND_ACK, before
+   * calling this).
+   *
+   * Live SITL finding (Task 3 report): arming while already in GUIDED and
+   * THEN switching to AUTO does NOT auto-execute a leading TAKEOFF mission
+   * item on this ArduPilot Copter build — the vehicle just idles armed on
+   * the ground and auto-disarms after ArduPilot's ground-idle timeout. The
+   * workflow that DID fly the mission: arm (GUIDED) -> explicit GUIDED
+   * takeoff() to the mission's cruise altitude -> THEN startMission(). Once
+   * airborne, switching to AUTO makes ArduPilot skip the already-satisfied
+   * TAKEOFF item and proceed straight to the first WAYPOINT — verified
+   * live: it flew both waypoints then RTL'd and auto-disarmed on landing. */
+  async function startMission(): Promise<void> {
+    assertConnected(deps)
+    const state = deps.getState()
+    if (state.vehicleType === 'copter' && !state.armed) {
+      throw new CommandError('NOT_ARMED', 'startMission (copter) requires the vehicle to be armed first')
+    }
+    await setMode('AUTO')
+  }
+
+  return { arm, disarm, setMode, takeoff, rtl, startMission }
 }

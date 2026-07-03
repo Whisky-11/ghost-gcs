@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createWsClient, type WsLike, type WebSocketImplCtor, type WsStatus } from '../ws.js'
-import type { TelemetryState } from '../types.js'
+import type { Alert, MissionItem, TelemetryState } from '../types.js'
 
 /** Fake WebSocket stand-in implementing the WsLike structural surface.
  * Every constructed instance is tracked on FakeWebSocket.instances so tests
@@ -107,6 +107,32 @@ describe('createWsClient', () => {
     socket.receive({ type: 'rpc_result', id, ok: false, code: 'BAD_PARAM', message: 'altM out of range' })
 
     await expect(promise).rejects.toThrow('BAD_PARAM')
+  })
+
+  it('resolves rpc<T>() with the rpc_result\'s data payload when present (Task 7/9 mission/AI rpcs)', async () => {
+    const client = createWsClient('ws://test', { WebSocketImpl: fakeCtor() })
+    const socket = FakeWebSocket.instances[0]!
+    socket.open()
+
+    const promise = client.rpc<MissionItem[]>('surveyGrid', { polygon: [], altM: 30, spacingM: 25 })
+    const id = socket.lastSentId()
+    const items: MissionItem[] = [{ seq: 0, command: 'WAYPOINT', lat: 29.3, lng: 47.9, altM: 30 }]
+    socket.receive({ type: 'rpc_result', id, ok: true, data: items })
+
+    await expect(promise).resolves.toEqual(items)
+  })
+
+  it('fires onAlerts with the parsed alert array from an {type:"alerts"} frame', () => {
+    const onAlerts = vi.fn()
+    createWsClient('ws://test', { WebSocketImpl: fakeCtor(), onAlerts })
+    const socket = FakeWebSocket.instances[0]!
+    socket.open()
+
+    const alerts: Alert[] = [{ code: 'LINK_STALE', severity: 'critical', message: 'no heartbeat for 12s' }]
+    socket.receive({ type: 'alerts', alerts })
+
+    expect(onAlerts).toHaveBeenCalledTimes(1)
+    expect(onAlerts).toHaveBeenCalledWith(alerts)
   })
 
   it('ignores an rpc_result whose id has no in-flight request', async () => {

@@ -3,7 +3,7 @@
 // Task 6 — BINDING). Kept free of React so it can be exercised directly from
 // vitest with an injected fake WebSocket implementation (WebSocketImpl) —
 // useTelemetry.ts is the thin React wrapper around this.
-import type { RpcMethod, RpcParams, RpcRequest, ServerMessage, TelemetryState } from './types'
+import type { Alert, RpcMethod, RpcParams, RpcRequest, ServerMessage, TelemetryState } from './types'
 
 export type WsStatus = 'connecting' | 'open' | 'closed'
 
@@ -30,6 +30,11 @@ const OPEN_READY_STATE = 1
 export interface CreateWsClientOptions {
   onTelemetry?: (state: TelemetryState) => void
   onStatusChange?: (status: WsStatus) => void
+  /** Task 7/8: the bridge's watchdog-alert push ({type:'alerts'}). Fired
+   * with the full current alert list every time the bridge broadcasts one
+   * (the bridge itself dedupes by code-set change — see ws/server.ts's
+   * pushAlerts — so this fires once per real change, not once per tick). */
+  onAlerts?: (alerts: Alert[]) => void
   /** Injectable WebSocket constructor — defaults to the ambient global
    * `WebSocket` (browser runtime). Tests pass a fake here. */
   WebSocketImpl?: WebSocketImplCtor
@@ -39,16 +44,19 @@ export interface CreateWsClientOptions {
 }
 
 export interface WsClient {
-  /** Sends an rpc request and resolves when the matching rpc_result arrives
-   * with ok:true, or rejects with `Error(code)` when ok:false. Rejects
+  /** Sends an rpc request and resolves with the rpc_result's `data` payload
+   * (Task 7 — mission/AI RPCs like surveyGrid/downloadMission/aiDraftMission
+   * ride data back this way; T = void for methods that never send one, e.g.
+   * arm/disarm/uploadMission) when the matching rpc_result arrives with
+   * ok:true, or rejects with `Error(code)` when ok:false. Rejects
    * immediately (without sending) if the socket isn't currently open. */
-  rpc(method: RpcMethod, params?: RpcParams): Promise<void>
+  rpc<T = void>(method: RpcMethod, params?: RpcParams): Promise<T>
   /** Stops the client and cancels any pending auto-reconnect. Idempotent. */
   close(): void
 }
 
 interface PendingRpc {
-  resolve: () => void
+  resolve: (data?: unknown) => void
   reject: (err: Error) => void
 }
 
@@ -105,12 +113,16 @@ export function createWsClient(url: string, options: CreateWsClientOptions = {})
         options.onTelemetry?.(msg.state)
         return
       }
+      if (msg.type === 'alerts') {
+        options.onAlerts?.(msg.alerts)
+        return
+      }
       if (msg.type === 'rpc_result') {
         const p = pending.get(msg.id)
         if (!p) return // no matching in-flight request (stale/duplicate reply) — ignore
         pending.delete(msg.id)
         if (msg.ok) {
-          p.resolve()
+          p.resolve(msg.data)
         } else {
           p.reject(new Error(msg.code))
         }
@@ -133,14 +145,14 @@ export function createWsClient(url: string, options: CreateWsClientOptions = {})
   connect()
 
   return {
-    rpc(method, params) {
-      return new Promise((resolve, reject) => {
+    rpc<T = void>(method: RpcMethod, params?: RpcParams): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
         if (!socket || socket.readyState !== OPEN_READY_STATE) {
           reject(new Error('NOT_CONNECTED'))
           return
         }
         const id = crypto.randomUUID()
-        pending.set(id, { resolve, reject })
+        pending.set(id, { resolve: (data) => resolve(data as T), reject })
         const req: RpcRequest = params !== undefined ? { type: 'rpc', id, method, params } : { type: 'rpc', id, method }
         socket.send(JSON.stringify(req))
       })
