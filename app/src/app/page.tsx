@@ -10,9 +10,9 @@ import { Tapes } from '@/components/instruments/Tapes'
 import { FlightControls } from '@/components/FlightControls'
 import { MissionControls } from '@/components/MissionControls'
 import { AlertsPanel } from '@/components/AlertsPanel'
-import { GhostPanel } from '@/components/GhostPanel'
+import { GhostPanel, type GhostAiMethod } from '@/components/GhostPanel'
 import { Toasts } from '@/components/Toasts'
-import type { LatLng, Mission, MissionItem } from '@/lib/types'
+import type { LatLng, Mission, MissionItem, RpcParams } from '@/lib/types'
 
 // maplibre-gl touches window/document at module load — must stay client-only
 // (ssr:false requires the dynamic() call to live in a Client Component, per
@@ -63,6 +63,16 @@ export default function Home() {
   const handleLoadDraftIntoEditor = useCallback((items: MissionItem[]) => {
     setLoadMissionRequest({ items, requestId: crypto.randomUUID() })
   }, [])
+
+  // M1 hardening (Task 11, carried from Task 10 review): narrow `rpc`'s type
+  // before it reaches GhostPanel so the AI-never-commands invariant is
+  // enforced by the compiler, not just by convention. `rpc` itself is still
+  // the full RpcMethod-accepting function (FlightControls/MissionControls/
+  // AlertsPanel below all still use it unnarrowed) — this wrapper is a
+  // structural subtype restriction applied only at GhostPanel's boundary.
+  // Calling aiRpc('uploadMission', ...) or aiRpc('arm') is a compile error:
+  // GhostAiMethod excludes every command/mission-mutating RpcMethod.
+  const aiRpc = useCallback(<T = void,>(method: GhostAiMethod, params?: RpcParams): Promise<T> => rpc<T>(method, params), [rpc])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -127,7 +137,7 @@ export default function Home() {
           />
           <AlertsPanel alerts={alerts} rpc={rpc} />
           <GhostPanel
-            rpc={rpc}
+            aiRpc={aiRpc}
             polygonPoints={polygonPoints}
             mission={mission}
             onDraftItemsChange={setDraftPreviewItems}

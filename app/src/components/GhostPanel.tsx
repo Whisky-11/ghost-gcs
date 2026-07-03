@@ -29,10 +29,25 @@ import { useEffect, useReducer, useState, type CSSProperties } from 'react'
 import { describeRpcError } from '@/lib/controls'
 import { explainErrorText } from '@/lib/alerts'
 import { draftGeometryFromEditor, ghostReducer, initialGhostState, type GhostDraftData } from '@/lib/ghost'
-import type { LatLng, Mission, MissionItem, RpcMethod, RpcParams } from '@/lib/types'
+import type { LatLng, Mission, MissionItem, RpcParams } from '@/lib/types'
+
+/** The three AI-only rpc methods GHOST is allowed to call — spec safety
+ * invariant 1 (AI never commands the vehicle), enforced at the TYPE level
+ * here (carried over from Task 10's review): narrowing this component's
+ * `rpc` prop to ONLY accept these three method names means a call like
+ * `rpc('uploadMission', ...)` or `rpc('arm')` from within GhostPanel is a
+ * COMPILE ERROR, not just a convention documented in the header comment
+ * above. This mirrors the bridge-side structural guarantee (`WsAi`'s
+ * narrowed handler type) on the client: the invariant is enforced by the
+ * type checker on both ends of the wire, not by code review alone. */
+export type GhostAiMethod = 'aiDraftMission' | 'aiNarrate' | 'aiDebrief'
 
 interface GhostPanelProps {
-  rpc<T = void>(method: RpcMethod, params?: RpcParams): Promise<T>
+  /** Narrowed rpc — see GhostAiMethod above. page.tsx wraps the full
+   * `rpc<T>(method: RpcMethod, ...)` from useTelemetry into this narrowed
+   * shape before passing it down, so GhostPanel structurally cannot reach
+   * uploadMission/startMission/arm/disarm/setMode/takeoff/rtl/etc. */
+  aiRpc<T = void>(method: GhostAiMethod, params?: RpcParams): Promise<T>
   /** Current in-progress survey polygon, lifted from VehicleMap's editor
    * state (page.tsx's onPolygonPointsChange) — used only to build the
    * geometry sent with "draft from drawing"; never mutated here. */
@@ -141,7 +156,7 @@ function GhostGlyph() {
   )
 }
 
-export function GhostPanel({ rpc, polygonPoints, mission, onDraftItemsChange, onLoadIntoEditor }: GhostPanelProps) {
+export function GhostPanel({ aiRpc, polygonPoints, mission, onDraftItemsChange, onLoadIntoEditor }: GhostPanelProps) {
   const [state, dispatch] = useReducer(ghostReducer, initialGhostState)
   const [draftRequest, setDraftRequest] = useState('')
   const [question, setQuestion] = useState('')
@@ -163,7 +178,7 @@ export function GhostPanel({ rpc, polygonPoints, mission, onDraftItemsChange, on
     dispatch({ type: 'draft/start' })
     try {
       const geometry = draftGeometryFromEditor(polygonPoints, mission)
-      const data = await rpc<GhostDraftData>('aiDraftMission', { request, geometry })
+      const data = await aiRpc<GhostDraftData>('aiDraftMission', { request, geometry })
       dispatch({ type: 'draft/success', data })
     } catch (err) {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
@@ -190,7 +205,7 @@ export function GhostPanel({ rpc, polygonPoints, mission, onDraftItemsChange, on
     if (!q) return
     dispatch({ type: 'narrate/start' })
     try {
-      const result = await rpc<{ text: string }>('aiNarrate', { question: q })
+      const result = await aiRpc<{ text: string }>('aiNarrate', { question: q })
       dispatch({ type: 'narrate/success', data: result.text })
     } catch (err) {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
@@ -201,7 +216,7 @@ export function GhostPanel({ rpc, polygonPoints, mission, onDraftItemsChange, on
   async function handleDebrief(): Promise<void> {
     dispatch({ type: 'debrief/start' })
     try {
-      const result = await rpc<{ text: string }>('aiDebrief')
+      const result = await aiRpc<{ text: string }>('aiDebrief')
       dispatch({ type: 'debrief/success', data: result.text })
     } catch (err) {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
