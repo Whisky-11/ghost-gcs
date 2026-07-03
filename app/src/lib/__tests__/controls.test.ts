@@ -10,6 +10,7 @@ import {
   createToastStore,
   describeRpcError,
   disarmDisabledReason,
+  modeChangeNeedsConfirm,
   rtlDisabledReason,
   takeoffDisabledReason,
   toastReducer,
@@ -136,6 +137,20 @@ describe('disabled-reason helpers', () => {
     expect(rtlDisabledReason(null)).toBeTruthy()
     expect(rtlDisabledReason(makeState({ armed: false }))).toBeTruthy()
     expect(rtlDisabledReason(makeState({ armed: true }))).toBeNull()
+  })
+})
+
+describe('modeChangeNeedsConfirm', () => {
+  it('requires confirm when armed (spec invariant 3)', () => {
+    expect(modeChangeNeedsConfirm(makeState({ armed: true }))).toBe(true)
+  })
+
+  it('fires immediately when disarmed (benign ground mode change)', () => {
+    expect(modeChangeNeedsConfirm(makeState({ armed: false }))).toBe(false)
+  })
+
+  it('fires immediately when state is null (no vehicle to confirm against)', () => {
+    expect(modeChangeNeedsConfirm(null)).toBe(false)
   })
 })
 

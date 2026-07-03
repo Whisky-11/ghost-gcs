@@ -76,6 +76,18 @@ export function rtlDisabledReason(state: TelemetryState | null): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Mode-change confirm gate (spec safety invariant 3 — carried from Task 9
+// review: confirmation is required for ANY state-changing command while
+// armed, not just arm itself). Ground-state (disarmed) mode changes are
+// benign and keep firing immediately; an armed mode change shows an inline
+// confirm in the UI instead of dispatching the rpc straight away.
+// ---------------------------------------------------------------------------
+
+export function modeChangeNeedsConfirm(state: TelemetryState | null): boolean {
+  return state?.armed === true
+}
+
+// ---------------------------------------------------------------------------
 // ArmSlider pure helpers — drag distance -> progress, and the fire gate.
 // The component only wires pointer events to these; every branch here is
 // covered without touching the DOM.

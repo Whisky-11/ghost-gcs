@@ -15,6 +15,7 @@ import {
   controlAvailability,
   describeRpcError,
   disarmDisabledReason,
+  modeChangeNeedsConfirm,
   rtlDisabledReason,
   takeoffDisabledReason,
   toastStore,
@@ -64,6 +65,11 @@ const inputStyle: CSSProperties = {
 export function FlightControls({ state, rpc }: FlightControlsProps) {
   const availability = controlAvailability(state)
   const [altInput, setAltInput] = useState(String(TAKEOFF_ALT_DEFAULT))
+  // Spec safety invariant 3 (carried from Task 9 review): while ARMED, a mode
+  // change is not fired straight from the dropdown's onChange — it's staged
+  // here and only dispatched once the user hits the inline Confirm button.
+  // Disarmed (ground) mode changes stay immediate — see modeChangeNeedsConfirm.
+  const [pendingMode, setPendingMode] = useState<string | null>(null)
 
   async function run(method: RpcMethod, params: RpcParams | undefined, successText: string): Promise<void> {
     try {
@@ -73,6 +79,25 @@ export function FlightControls({ state, rpc }: FlightControlsProps) {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
       toastStore.add('error', `${code}: ${describeRpcError(code)}`)
     }
+  }
+
+  function handleModeChange(newMode: string): void {
+    if (modeChangeNeedsConfirm(state)) {
+      setPendingMode(newMode)
+    } else {
+      void run('setMode', { mode: newMode }, `Mode set to ${newMode}`)
+    }
+  }
+
+  function confirmModeChange(): void {
+    if (pendingMode === null) return
+    const mode = pendingMode
+    setPendingMode(null)
+    void run('setMode', { mode }, `Mode set to ${mode}`)
+  }
+
+  function cancelModeChange(): void {
+    setPendingMode(null)
   }
 
   function commitAlt(): number {
@@ -93,10 +118,10 @@ export function FlightControls({ state, rpc }: FlightControlsProps) {
       <label style={fieldLabelStyle}>
         Mode
         <select
-          value={state?.mode ?? ''}
+          value={pendingMode ?? state?.mode ?? ''}
           disabled={!state?.connected || availability.modes.length === 0}
           title={modeDisabledReason ?? undefined}
-          onChange={(e) => void run('setMode', { mode: e.target.value }, `Mode set to ${e.target.value}`)}
+          onChange={(e) => handleModeChange(e.target.value)}
           style={inputStyle}
         >
           {state?.mode && !availability.modes.includes(state.mode) && <option value={state.mode}>{state.mode}</option>}
@@ -107,6 +132,22 @@ export function FlightControls({ state, rpc }: FlightControlsProps) {
           ))}
         </select>
       </label>
+
+      {pendingMode !== null && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontFamily: 'monospace', fontSize: 12 }}>
+          <span style={{ color: 'var(--fg)' }}>Change mode to {pendingMode}?</span>
+          <button
+            type="button"
+            onClick={confirmModeChange}
+            style={{ ...buttonStyle(true), width: 'auto', padding: '4px 10px', border: '1px solid var(--crit)' }}
+          >
+            Confirm
+          </button>
+          <button type="button" onClick={cancelModeChange} style={{ ...buttonStyle(true), width: 'auto', padding: '4px 10px' }}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       <div style={fieldLabelStyle}>
         Arm
