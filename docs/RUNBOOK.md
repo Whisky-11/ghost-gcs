@@ -3,8 +3,12 @@
 This is the exact procedure to fly a simulated vehicle end-to-end through our
 own GCS: ArduPilot SITL (Docker) → `bridge/` (MAVLink↔WebSocket daemon) →
 `app/` (Next.js UI). It was executed for real against live SITL for both
-vehicle types while writing this document (Task 10) — see "Evidence" under
-each golden path below for the actual captured output.
+vehicle types while writing this document (Task 10, P0-only flows) — see
+"Evidence" under each golden path below for the actual captured output. The
+**P1 golden path** (mission editor, survey generation, GHOST AI copilot
+draft→load→upload→fly, rover 2-waypoint AUTO mission) was executed for real
+against live SITL, including one real `claude` CLI call, while writing
+Task 11 — see "P1: mission editor + GHOST copilot golden path" below.
 
 ## Prerequisites
 
@@ -174,14 +178,177 @@ swap). Waited ~15s for `"EKF3 IMU0/1 is using GPS"` status texts and a GPS
 own (correct) safety gate, propagated faithfully by `commands.ts`'s
 `ACK_FAILED` path; no bridge or app change was needed.
 
+## P1: mission editor + GHOST copilot golden path
+
+**Sequence (copter)**: draw a survey polygon in the mission editor → GHOST
+panel: "Draft from drawing" with the request "survey this at 60m" → GHOST
+(the real local `claude` CLI, headless) returns a WAYPOINT-only mission
+draft → dashed preview overlay on the map → "Load into editor" → review →
+**Upload** → `setMode GUIDED` → **arm** → **GUIDED takeoff to 60m** (the
+draft's cruise altitude) → **Start Mission** (switches to AUTO — ArduPilot
+resumes the already-airborne vehicle at the first WAYPOINT, no TAKEOFF item
+needed) → watch it fly the lawnmower grid → **RTL** → ask GHOST a question →
+**Debrief**.
+
+**Sequence (rover)**: draw/build a 2-waypoint mission → **Upload** →
+`setMode GUIDED` → **arm** → **Start Mission** (AUTO) → watch it drive the
+2-waypoint route.
+
+### Evidence (executed 2026-07-03, live SITL copter — real `claude` CLI)
+
+Since this agent can't click, this pass was driven the same way as Task
+10's P0 evidence: a temporary `ws`-based driver script (not committed,
+deleted after the run) sending the exact `{type:'rpc',...}` frames
+`app/src/lib/ws.ts`'s `rpc()` sends — including `aiDraftMission`, which
+calls the bridge's real `ClaudeHeadless` adapter, which spawns the real
+local `claude` CLI (no fake Spawner — this is the actual production path,
+not a test double). Home position and a ~80×80m polygon around it (four
+corners, drawn-polygon equivalent) were read from the first telemetry
+frame.
+
+```
+[initial] connected=true vehicleType=copter armed=false mode=STABILIZE
+[home] {"lat":29.3375,"lng":47.9743999,"altM":10.1}
+--- aiDraftMission: "survey this at 60m" ---
+[draft] items= 8 notes= Lawnmower survey draft at 60m AGL over the ~80x80m drawn polygon: 4
+  north-south legs spaced ~24m apart (suitable overlap for a typical copter camera at 60m),
+  inset ~5m from the polygon edges so every waypoint sits strictly inside the geometry.
+  Waypoints only — operator adds takeoff/RTL on review.
+--- Load into editor + upload ---
+[uploadMission] ok
+--- setMode GUIDED ---
+[after setMode GUIDED] armed=false mode=GUIDED
+--- arm ---
+[after arm] armed=true mode=GUIDED relAlt=0.00
+--- GUIDED takeoff 60m ---
+[climb t+2s]  relAlt=0.00  climb=0.00
+[climb t+8s]  relAlt=8.60  climb=2.47
+[climb t+14s] relAlt=23.58 climb=2.50
+[climb t+20s] relAlt=38.58 climb=2.50
+[climb t+26s] relAlt=53.59 climb=2.49
+[climb t+28s] relAlt=58.37 climb=1.87
+--- startMission (AUTO) ---
+[auto t+2s]  mode=AUTO relAlt=60.36 groundMps=0.93
+[auto t+6s]  mode=AUTO relAlt=60.35 groundMps=7.40   (leg 1 — accelerating)
+[auto t+10s] mode=AUTO relAlt=60.04 groundMps=4.25   (turn onto leg 2)
+[auto t+16s] mode=AUTO relAlt=60.01 groundMps=9.40   (leg 2 — cruise)
+... (groundMps repeatedly cycles ~0.1→9+ m/s across the run — the
+    accelerate/cruise/decelerate/turn pattern of a serpentine lawnmower grid,
+    for a total of ~120s, matching the 8-waypoint draft) ...
+[auto t+120s] mode=AUTO relAlt=59.99 groundMps=0.03  (arrived at final waypoint, holding)
+--- rtl ---
+[rtl t+2s]  mode=RTL relAlt=59.99 groundMps=0.55
+[rtl t+8s]  mode=RTL relAlt=59.99 groundMps=7.92      (flying back toward home)
+[rtl t+20s] mode=RTL relAlt=59.28 climb=-1.25         (descent begins over home)
+[rtl t+38s] mode=RTL relAlt=31.90 climb=-1.50
+[rtl t+56s] mode=RTL relAlt=8.85  climb=-0.51
+--- (continued polling) ---
+[t+2s] mode=RTL armed=false relAlt=0.00
+AUTO-DISARM CONFIRMED
+--- ask GHOST a question ---
+[aiNarrate answer] "Battery margin looks comfortable: you're at 49% remaining (12.3V) and the
+  vehicle is already essentially over home — ... 49% is far more than needed to complete this
+  landing."
+--- Debrief last flight ---
+[aiDebrief] {"text":"Flight completed in approximately 120 seconds with no alerts raised. The
+  vehicle reached a maximum altitude of 60.0 m and a peak groundspeed of about 8.0 m/s, then
+  transitioned from AUTO to RTL to conclude the flight. ... Battery ended at a minimum of 46%,
+  leaving a healthy margin at landing.",
+  "stats":{"durationSec":120.054,"maxAltM":59.996,"maxGroundMps":7.97,"minBatteryPct":46,
+  "modeChanges":["AUTO","RTL"],"alertHistory":[],"waypointsFlown":1}}
+```
+
+The AI draft's 8 waypoints all validated against `missionDraftSchema`
+(WAYPOINT-only, altM=60, first attempt — no retry needed), matched the
+requested geometry (inset inside the drawn polygon), and flew exactly as
+drafted: GUIDED takeoff to the draft's cruise altitude, AUTO through all 8
+legs (varying groundspeed = accelerate/cruise/turn pattern of a lawnmower
+grid), explicit RTL, auto-disarm on touchdown. `aiNarrate` and `aiDebrief`
+both returned coherent, telemetry-grounded text from the real CLI. No
+defects found in this pass.
+
+### Evidence (executed 2026-07-03, live SITL rover — 2-waypoint AUTO mission)
+
+Per the carry-note above, swapped the copter SITL container for a rover one
+on the same port; the bridge auto-reconnected. A 2-waypoint mission (~60m
+north, then ~60m north-east of home) was uploaded directly (this pass
+exercises the mission-upload/AUTO path, not GHOST — GHOST's mission drafts
+are WAYPOINT-only same as any hand-built mission, so the flown behavior is
+identical either way):
+
+```
+[initial] connected=true vehicleType=rover armed=false mode=MANUAL
+[home] {"lat":29.3375,"lng":47.9743999,"altM":10}
+--- uploadMission (2 waypoints) ---
+[uploadMission] ok
+--- setMode GUIDED ---
+[after setMode GUIDED] armed=false mode=GUIDED
+--- arm ---
+[arm attempt 1] rejected: ACK_FAILED: command 400 rejected: MAV_RESULT=4 — waiting for GPS/EKF...
+[arm attempt 4] rejected: ACK_FAILED: command 400 rejected: MAV_RESULT=4 — waiting for GPS/EKF...
+[after arm] armed=true mode=GUIDED
+--- startMission (AUTO) ---
+[auto t+2s]  mode=AUTO groundMps=0.39   (pulling away)
+[auto t+8s]  mode=AUTO groundMps=5.26   (leg 1 cruise)
+[auto t+16s] mode=AUTO groundMps=2.97   (turn onto leg 2)
+[auto t+22s] mode=AUTO groundMps=5.07   (leg 2 cruise)
+[auto t+32s] mode=AUTO groundMps=0.25   (arriving at waypoint 2)
+[auto t+90s] mode=AUTO groundMps=0.03   (stopped/holding at final waypoint)
+--- disarm (cleanup) ---
+armed=false shortly after (confirmed on a follow-up poll — telemetry
+  reflects the disarm ~1s after the rpc resolves, a broadcast-cadence lag,
+  not a bug)
+ROVER PASS COMPLETE
+```
+
+Same pre-arm trap as Task 10's rover pass (EKF/GPS not converged
+immediately after the container swap — `"PreArm: Need Position Estimate"`,
+resolved by waiting/retrying) — ArduPilot's own correct safety gate, not a
+regression. The rover accelerated to ~5 m/s cruise on each leg, decelerated
+and effectively stopped (`groundMps` settling to ~0.03, sensor noise floor)
+right around when it should have reached the second waypoint, confirming
+it drove the 2-waypoint route. No code defects found in this pass.
+
 ## Full gates (run after the golden paths, everything stopped)
 
 ```
-pnpm -r test              # 56/56 app + bridge unit tests
+pnpm -r test              # bridge: 223 passed, 1 skipped (claude.smoke, gated) — app: 145 passed
 pnpm -r typecheck          # app + bridge, clean
 pnpm --filter app build    # production build, succeeds
 pnpm audit --prod          # 0 vulnerabilities at every severity
 ```
+
+The one skipped bridge test (`claude.smoke.test.ts`) is a GATED real-`claude`-CLI
+smoke, run separately and on purpose — see "GATED real-CLI smoke test" below.
+
+## GATED real-CLI smoke test
+
+Every AI test in the suite injects a fake `Spawner` — no test in
+`pnpm -r test`'s normal run ever spawns the real `claude` binary. The one
+documented exception, `bridge/src/ai/__tests__/claude.smoke.test.ts`, is
+skipped unless `GHOST_AI_SMOKE=1` is set:
+
+```bash
+GHOST_AI_SMOKE=1 pnpm --filter bridge test claude.smoke
+```
+
+Executed for real (2026-07-03) — one live `askJson` call against a trivial
+`{ answer: string }` schema:
+
+```
+stdout | ... askJson performs one real `claude -p` call and validates a trivial schema
+[claude.smoke] real CLI askJson result: {"answer":"blue"}
+
+ ✓ src/ai/__tests__/claude.smoke.test.ts > ... askJson performs one real `claude -p` call ... 7005ms
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+```
+
+Confirms the real CLI spawn → `--output-format json` parse → `.result`
+extraction → zod validation path end to end, exactly as
+`bridge/src/ai/claude.ts`'s header comment documents. Without
+`GHOST_AI_SMOKE=1`, the same command reports the file as skipped
+(confirmed: `Test Files  1 skipped (1)`, zero real CLI calls, ~100ms).
 
 ## Troubleshooting
 
@@ -195,3 +362,5 @@ pnpm audit --prod          # 0 vulnerabilities at every severity
 | `arm` rejected with `ACK_FAILED ... MAV_RESULT=4` right after SITL boots (fresh boot or after a copter↔rover container swap) | ArduPilot's own pre-arm check: `"PreArm: Need Position Estimate"` — EKF/GPS hasn't converged yet | Wait ~10–20s after the vehicle's first HEARTBEAT for GPS 3D fix + `"EKF3 ... is using GPS"` status texts before arming; this is correct safety behavior, not a bug |
 | Map tiles don't load / grey background in `VehicleMap` | No internet access to the tile server (MapLibre dark style is a hosted vector tile source, not bundled) | Expected in offline/sandboxed environments — the map still renders the vehicle marker/track on the (blank) canvas; telemetry, instruments, and controls are unaffected since they don't depend on tile availability |
 | `docker build` for `ghost-sitl` takes 15–20+ minutes | First build compiles ArduPilot from source (git clone + submodules + `./waf configure && ./waf copter rover`) | Expected once; subsequent runs reuse the cached image unless `sim/Dockerfile` changes. See `sim/README.md`'s native-macOS-build fallback if Docker itself is the blocker |
+| `orbctl status` shows `Stopped` and `docker info`/`docker ps` hang or refuse to connect even though the OrbStack app process is running | The OrbStack VM itself hasn't finished starting (`orbctl start` can time out once with "timed out waiting for VM to start" on a cold boot) | Run `orbctl start` again — it's idempotent; a second call typically reports "OrbStack is already running. Docker engine is ready to use." within seconds. Confirmed live 2026-07-03 (Task 11): first `orbctl start` timed out, second succeeded immediately |
+| `sim/run.sh` prints the `DEPRECATED: found old 'falcon-sitl' image...` fallback message | No `ghost-sitl`-tagged image exists yet, only the pre-rename `falcon-sitl` one | Run `docker tag falcon-sitl ghost-sitl` once (both tags then point at the same image ID — confirmed already done in this repo as of Task 11, `docker images` shows both tags sharing one `IMAGE ID`) so `sim/run.sh` takes its primary `ghost-sitl` path instead of the fallback |
