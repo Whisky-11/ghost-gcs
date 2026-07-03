@@ -6,6 +6,8 @@ import { AttitudeIndicator } from '@/components/instruments/AttitudeIndicator'
 import { Hsi } from '@/components/instruments/Hsi'
 import { StatusChips } from '@/components/instruments/StatusChips'
 import { Tapes } from '@/components/instruments/Tapes'
+import { FlightControls } from '@/components/FlightControls'
+import { Toasts } from '@/components/Toasts'
 
 // maplibre-gl touches window/document at module load — must stay client-only
 // (ssr:false requires the dynamic() call to live in a Client Component, per
@@ -13,7 +15,7 @@ import { Tapes } from '@/components/instruments/Tapes'
 const VehicleMap = dynamic(() => import('@/components/VehicleMap'), { ssr: false })
 
 export default function Home() {
-  const { state, wsStatus } = useTelemetry()
+  const { state, wsStatus, rpc } = useTelemetry()
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -61,12 +63,10 @@ export default function Home() {
             <Hsi yawDeg={state?.attitude?.yawDeg ?? null} />
           </div>
           <Tapes relAltM={state?.position?.relAltM ?? null} groundMps={state?.speed?.groundMps ?? null} />
-          {/* Flight controls (Task 9) land here. */}
-          <p style={{ color: 'var(--fg-dim)', fontFamily: 'monospace', fontSize: 13 }}>
-            Flight controls land in Task 9.
-          </p>
+          <FlightControls state={state} rpc={rpc} />
         </aside>
       </div>
+      <Toasts />
     </div>
   )
 }
