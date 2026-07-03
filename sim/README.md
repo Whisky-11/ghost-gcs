@@ -48,6 +48,33 @@ Expect `tcp connected` immediately, then decoded `HEARTBEAT` lines within ~10s o
 probe connecting (the `:wait` flag means SITL only starts ticking once a client is
 attached).
 
+## Swapping vehicle types (copter ↔ rover)
+
+SITL is **single-client on TCP 5760** — only one `falcon-sitl` container can
+hold the port at a time, and only the copter *or* rover binary runs inside a
+given container run. To swap:
+
+```bash
+docker stop falcon-sitl   # (or docker rm -f, if it's not --rm-removing itself)
+sim/run.sh rover          # new container, same port
+```
+
+The bridge does **not** need to be restarted — `VehicleLink`'s existing 2s
+reconnect backoff (`bridge/src/mavlink/link.ts`) notices the TCP drop,
+retries every 2s (you'll see `ECONNREFUSED` lines in the bridge log while the
+new container boots — expected, not an error to chase), and reconnects on
+its own once the new SITL is listening. `TelemetryState.vehicleType` flips
+from `copter` to `rover` on the first decoded HEARTBEAT from the new
+process. Verified live during Task 10's golden-path run.
+
+**Give it ~10–20s after reconnecting before arming.** A fresh SITL boot (or
+a post-swap reconnect) needs a few seconds for GPS to acquire a fix and the
+EKF to converge; an `arm` sent too early is correctly rejected by ArduPilot
+with `ACK_FAILED ... MAV_RESULT=4` and a `"PreArm: Need Position Estimate"`
+status text (visible in `TelemetryState.statusTexts`). This is ArduPilot's
+own safety gate working as intended, not a bridge/app bug — wait for a GPS
+3D fix and an `"EKF3 ... is using GPS"` status text, then retry.
+
 ## Native macOS build fallback
 
 If running ArduPilot SITL in Docker becomes a blocker (e.g. Docker perf/networking
