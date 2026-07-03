@@ -1,0 +1,11 @@
+packages:
+  - bridge
+  - app
+
+# next-app's own optional native/postinstall deps (image optimization sharp
+# binary, unrs-resolver oxc-based resolver) — neither is required for our
+# build/dev/test path (no next/image remote optimization used), so skip
+# running their build scripts rather than interactively approving them.
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
