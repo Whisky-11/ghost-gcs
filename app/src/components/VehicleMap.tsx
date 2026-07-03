@@ -1,9 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { TelemetryState } from '@/lib/types'
+import type { LatLng, Mission, MissionItem, RpcMethod, RpcParams, TelemetryState } from '@/lib/types'
+import { TAKEOFF_ALT_DEFAULT } from '@/lib/controls'
+import { initialMissionEditorState, missionEditorReducer } from '@/lib/mission'
+import MissionOverlay from './MissionOverlay'
+import { MissionEditor } from './MissionEditor'
 
 // CARTO dark-matter basemap — free tier, attribution required. The Map
 // constructor's `attributionControl` option defaults to a visible compact
@@ -30,9 +34,18 @@ const VEHICLE_ARROW_SVG = `
 
 interface VehicleMapProps {
   state: TelemetryState | null
+  /** Task 8: needed to call the bridge's pure surveyGrid RPC when the user
+   * closes a survey polygon. Structurally the same shape useTelemetry()
+   * returns, so callers pass its `rpc` straight through. */
+  rpc<T = void>(method: RpcMethod, params?: RpcParams): Promise<T>
+  /** Task 8 forward-compat hook (consumed by Task 9's mission upload
+   * controls): fired with the current editor mission every time it changes.
+   * Optional so VehicleMap stays fully self-contained/functional without a
+   * consumer wired up yet. */
+  onMissionChange?: (mission: Mission) => void
 }
 
-export default function VehicleMap({ state }: VehicleMapProps) {
+export default function VehicleMap({ state, rpc, onMissionChange }: VehicleMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const vehicleMarkerRef = useRef<maplibregl.Marker | null>(null)
@@ -42,6 +55,31 @@ export default function VehicleMap({ state }: VehicleMapProps) {
   const centeredRef = useRef(false)
   const followRef = useRef(true)
   const [following, setFollowing] = useState(true)
+
+  // Mirrors of the map instance + its style-loaded flag as REACT STATE (the
+  // refs above stay for the imperative handlers that were already using
+  // them pre-Task-8) so MissionOverlay — a child component — re-renders once
+  // there's a real map to attach sources/layers to.
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
+  const [styleLoaded, setStyleLoaded] = useState(false)
+
+  // Mission editor state (Task 8) — click-to-add waypoints / draw-a-polygon.
+  // Owned here (not lifted to page.tsx) so VehicleMap is a fully
+  // self-contained "host the overlay + click/draw modes" component per the
+  // brief; onMissionChange is the escape hatch for a future consumer (Task
+  // 9's upload controls) to observe the built mission.
+  const [editor, dispatch] = useReducer(missionEditorReducer, initialMissionEditorState)
+  const [defaultAltM, setDefaultAltM] = useState(TAKEOFF_ALT_DEFAULT)
+  // Click handlers are registered once (map mount effect) — a ref keeps
+  // them reading the latest mode-default altitude without re-registering.
+  const defaultAltMRef = useRef(defaultAltM)
+  useEffect(() => {
+    defaultAltMRef.current = defaultAltM
+  }, [defaultAltM])
+
+  useEffect(() => {
+    onMissionChange?.(editor.mission)
+  }, [editor.mission, onMissionChange])
 
   // Map lifecycle: created once on mount, destroyed on unmount.
   useEffect(() => {
@@ -53,6 +91,7 @@ export default function VehicleMap({ state }: VehicleMapProps) {
       zoom: 14,
     })
     mapRef.current = map
+    setMapInstance(map)
 
     // Any user-initiated pan/drag/zoom breaks auto-follow until "Recenter"
     // is pressed.
@@ -65,8 +104,20 @@ export default function VehicleMap({ state }: VehicleMapProps) {
     map.on('dragstart', stopFollowing)
     map.on('wheel', stopFollowing)
 
+    // Task 8: a single click handler drives BOTH editor modes —
+    // missionEditorReducer's 'mapClick' action is mode-aware (waypoint mode
+    // appends a mission waypoint, polygon mode appends a polygon vertex).
+    map.on('click', (e) => {
+      dispatch({
+        type: 'mapClick',
+        latlng: { lat: e.lngLat.lat, lng: e.lngLat.lng },
+        altM: defaultAltMRef.current,
+      })
+    })
+
     map.on('load', () => {
       styleLoadedRef.current = true
+      setStyleLoaded(true)
       map.addSource(TRAIL_SOURCE_ID, {
         type: 'geojson',
         data: {
@@ -87,7 +138,9 @@ export default function VehicleMap({ state }: VehicleMapProps) {
     return () => {
       map.remove()
       mapRef.current = null
+      setMapInstance(null)
       styleLoadedRef.current = false
+      setStyleLoaded(false)
       vehicleMarkerRef.current = null
       homeMarkerRef.current = null
       trailRef.current = []
@@ -158,9 +211,34 @@ export default function VehicleMap({ state }: VehicleMapProps) {
     }
   }, [state?.home])
 
+  // Task 8: closing a survey polygon calls the bridge's pure surveyGrid RPC
+  // (Task 2's lawnmower generator, run server-side — the app never generates
+  // the grid itself) and loads the returned waypoints as the mission.
+  const generateSurvey = useCallback(
+    async (polygon: LatLng[], altM: number, spacingM: number): Promise<void> => {
+      const items = await rpc<MissionItem[]>('surveyGrid', { polygon, altM, spacingM })
+      dispatch({ type: 'setMissionItems', items })
+    },
+    [rpc],
+  )
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+      <MissionOverlay map={mapInstance} styleLoaded={styleLoaded} mission={editor.mission} polygonPoints={editor.polygonPoints} />
+      <MissionEditor
+        mode={editor.mode}
+        mission={editor.mission}
+        polygonPoints={editor.polygonPoints}
+        defaultAltM={defaultAltM}
+        onDefaultAltMChange={setDefaultAltM}
+        onModeChange={(mode) => dispatch({ type: 'setMode', mode })}
+        onRemoveWaypoint={(seq) => dispatch({ type: 'removeWaypoint', seq })}
+        onReorderWaypoint={(fromSeq, toSeq) => dispatch({ type: 'reorderWaypoint', fromSeq, toSeq })}
+        onClearPolygon={() => dispatch({ type: 'clearPolygon' })}
+        onClearMission={() => dispatch({ type: 'clearMission' })}
+        onGenerateSurvey={generateSurvey}
+      />
       {!following && (
         <button
           onClick={recenter}

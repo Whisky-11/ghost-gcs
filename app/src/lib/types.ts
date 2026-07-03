@@ -72,15 +72,89 @@ export interface TelemetryMessage {
   state: TelemetryState
 }
 
+// --- Task 7/8 additions: mission model, geometry, watchdog alerts --------
+// Mirrors bridge/src/missions/model.ts's MissionItem/Mission,
+// bridge/src/missions/survey.ts's LatLng, and bridge/src/watchdog/rules.ts's
+// Alert field-for-field (same "hand-kept mirror" contract as the rest of
+// this file — the bridge owns runtime validation + the compile-time
+// AssertEqual honesty checks in ws/schema.ts; the app trusts the bridge's
+// output shape).
+
+export type MissionItemCommand = 'WAYPOINT' | 'TAKEOFF' | 'RTL' | 'LAND'
+
+export interface MissionItem {
+  seq: number
+  command: MissionItemCommand
+  lat: number
+  lng: number
+  altM: number
+}
+
+export interface Mission {
+  items: MissionItem[]
+}
+
+// Shared geometry primitive (survey polygons, AI-drafted-mission geometry).
+export interface LatLng {
+  lat: number
+  lng: number
+}
+
+export type AlertSeverity = 'info' | 'warn' | 'critical'
+
+export interface Alert {
+  code: string
+  severity: AlertSeverity
+  message: string
+  data?: Record<string, unknown>
+}
+
+// server -> client: watchdog-alert push (Task 7). Broadcast whenever the
+// *set* of active alert codes changes on the bridge. Pure projection of
+// watchdog/rules.ts's evaluateWatchdog() output — never AI-produced.
+export interface AlertsMessage {
+  type: 'alerts'
+  alerts: Alert[]
+}
+
 // client -> server: rpc request
-export type RpcMethod = 'arm' | 'disarm' | 'setMode' | 'takeoff' | 'rtl'
+export type RpcMethod =
+  | 'arm'
+  | 'disarm'
+  | 'setMode'
+  | 'takeoff'
+  | 'rtl'
+  // Task 7 additions — mission RPCs (the APP sequences upload -> arm ->
+  // start; the bridge never chains them) + the AI RPCs (spec safety
+  // invariant 1: these produce DATA/TEXT only, never a command).
+  | 'uploadMission'
+  | 'startMission'
+  | 'clearMission'
+  | 'downloadMission'
+  | 'surveyGrid'
+  | 'aiDraftMission'
+  | 'aiNarrate'
+  | 'aiDebrief'
 
 export interface RpcParams {
   mode?: string
   // Bounded 2-120m — see TAKEOFF_ALT_MIN/TAKEOFF_ALT_MAX below. Mirrors
   // bridge/src/ws/schema.ts's rpcParamsSchema.altM (fix wave: takeoff
-  // altitude bound added at both the schema and command layers).
+  // altitude bound added at both the schema and command layers). Shared by
+  // takeoff.altM and surveyGrid.altM (same bound, see MISSION_ALT_MIN/MAX).
   altM?: number
+  // uploadMission
+  mission?: Mission
+  // surveyGrid
+  polygon?: LatLng[]
+  spacingM?: number
+  headingDeg?: number
+  // aiDraftMission
+  request?: string
+  geometry?: LatLng[] | null
+  // aiNarrate
+  question?: string
+  alertCode?: string
 }
 
 export interface RpcRequest {
@@ -90,12 +164,15 @@ export interface RpcRequest {
   params?: RpcParams
 }
 
-// server -> client: rpc reply
+// server -> client: rpc reply. `data` (Task 7) carries mission/AI payloads —
+// downloadMission/surveyGrid return MissionItem[], aiDraftMission returns a
+// mission draft, aiNarrate/aiDebrief return narration text — every other
+// method omits it.
 export type RpcResult =
-  | { type: 'rpc_result'; id: string; ok: true }
+  | { type: 'rpc_result'; id: string; ok: true; data?: unknown }
   | { type: 'rpc_result'; id: string; ok: false; code: string; message: string }
 
-export type ServerMessage = TelemetryMessage | RpcResult
+export type ServerMessage = TelemetryMessage | RpcResult | AlertsMessage
 
 // Takeoff altitude bounds (bridge/src/ws/schema.ts rpcParamsSchema.altM +
 // bridge/src/commands/commands.ts's BAD_PARAM guard, added in the Task 6 fix
@@ -103,3 +180,10 @@ export type ServerMessage = TelemetryMessage | RpcResult
 // (defense in depth, matching the bridge's own layered validation).
 export const TAKEOFF_ALT_MIN = 2
 export const TAKEOFF_ALT_MAX = 120
+
+// Mission item altitude bounds (bridge/src/missions/model.ts's
+// MISSION_ALT_MIN_M/MAX_M) — identical range to TAKEOFF_ALT_MIN/MAX above.
+// Aliased under a mission-specific name for clarity at surveyGrid/mission
+// editor call sites rather than duplicating the literal 2/120 constants.
+export const MISSION_ALT_MIN = TAKEOFF_ALT_MIN
+export const MISSION_ALT_MAX = TAKEOFF_ALT_MAX

@@ -43,7 +43,7 @@ export default function Home() {
       </header>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-          <VehicleMap state={state} />
+          <VehicleMap state={state} rpc={rpc} />
         </div>
         <aside
           style={{
