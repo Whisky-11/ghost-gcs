@@ -140,6 +140,90 @@ describe('makeMissionProtocol', () => {
       const protocol = makeMissionProtocol({ link })
       await expect(protocol.upload(ITEMS)).rejects.toBeInstanceOf(MissionError)
     })
+
+    it('handles out-of-order MISSION_REQUEST_INT (wire seq=2 before seq=1) by resending the correct app item for each requested seq', async () => {
+      const protocol = makeMissionProtocol({ link })
+      const promise = protocol.upload(ITEMS)
+
+      // Vehicle asks for wire seq=2 (app item seq=1, WAYPOINT) before seq=1 (app item seq=0, TAKEOFF).
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 2 })
+      let item = lastSent(link) as common.MissionItemInt
+      expect(item.seq).toBe(2)
+      expect(item.command).toBe(common.MavCmd.NAV_WAYPOINT)
+
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 1 })
+      item = lastSent(link) as common.MissionItemInt
+      expect(item.seq).toBe(1)
+      expect(item.command).toBe(common.MavCmd.NAV_TAKEOFF)
+
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 0 })
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 3 })
+      link.emitMessage('MISSION_ACK', { type: common.MavMissionResult.ACCEPTED })
+      await expect(promise).resolves.toBeUndefined()
+    })
+
+    it('re-requesting the same wire seq resends the item without prematurely finishing the transfer', async () => {
+      const protocol = makeMissionProtocol({ link })
+      const promise = protocol.upload(ITEMS)
+
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 1 })
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 1 }) // vehicle re-asks for the same item (e.g. dropped packet)
+      const takeoffSends = link.sent.filter(
+        (m) => m instanceof common.MissionItemInt && m.seq === 1,
+      )
+      expect(takeoffSends).toHaveLength(2)
+      expect(takeoffSends[0]).toEqual(takeoffSends[1])
+
+      // Transfer must not have resolved/rejected yet — only 2 of 4 wire items sent, no ACK yet.
+      let settled = false
+      promise.then(
+        () => (settled = true),
+        () => (settled = true),
+      )
+      await Promise.resolve()
+      expect(settled).toBe(false)
+
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 0 })
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 2 })
+      link.emitMessage('MISSION_REQUEST_INT', { seq: 3 })
+      link.emitMessage('MISSION_ACK', { type: common.MavMissionResult.ACCEPTED })
+      await expect(promise).resolves.toBeUndefined()
+    })
+  })
+
+  it('upload -> download round-trip: piping upload\'s captured wire items into download\'s handler reproduces the original app items exactly (proves the +/-1 home-slot offset is exactly inverse)', async () => {
+    const uploadProtocol = makeMissionProtocol({ link })
+    const uploadPromise = uploadProtocol.upload(ITEMS)
+
+    // Drive the upload handshake to completion, capturing every MISSION_ITEM_INT sent (wire seq 0..3).
+    link.emitMessage('MISSION_REQUEST_INT', { seq: 0 })
+    link.emitMessage('MISSION_REQUEST_INT', { seq: 1 })
+    link.emitMessage('MISSION_REQUEST_INT', { seq: 2 })
+    link.emitMessage('MISSION_REQUEST_INT', { seq: 3 })
+    link.emitMessage('MISSION_ACK', { type: common.MavMissionResult.ACCEPTED })
+    await uploadPromise
+
+    const wireItems = link.sent.filter((m): m is common.MissionItemInt => m instanceof common.MissionItemInt)
+    expect(wireItems).toHaveLength(4)
+
+    // Feed those exact wire items (as the vehicle would echo them back) through a fresh download().
+    const downloadLink = new FakeLink()
+    const downloadProtocol = makeMissionProtocol({ link: downloadLink })
+    const downloadPromise = downloadProtocol.download()
+
+    downloadLink.emitMessage('MISSION_COUNT', { count: wireItems.length })
+    for (const wireItem of wireItems) {
+      downloadLink.emitMessage('MISSION_ITEM_INT', {
+        seq: wireItem.seq,
+        command: wireItem.command,
+        x: wireItem.x,
+        y: wireItem.y,
+        z: wireItem.z,
+      })
+    }
+
+    const downloaded = await downloadPromise
+    expect(downloaded).toEqual(ITEMS)
   })
 
   describe('download', () => {
@@ -203,6 +287,37 @@ describe('makeMissionProtocol', () => {
       ])
       // Closing MISSION_ACK was sent after the last item.
       expect(link.sent[link.sent.length - 1]).toBeInstanceOf(common.MissionAck)
+    })
+
+    it('ignores a MISSION_ITEM_INT whose wireSeq does not match the expected next wire seq (stale/dup), then accepts the correct item', async () => {
+      const protocol = makeMissionProtocol({ link })
+      const promise = protocol.download()
+
+      link.emitMessage('MISSION_COUNT', { count: 2 })
+      let req = lastSent(link) as common.MissionRequestInt
+      expect(req.seq).toBe(0)
+
+      // Stale/dup: vehicle re-sends wireSeq=0 after we've already moved on would be a no-op here since
+      // nothing was accepted yet; simulate a genuinely stale item — wireSeq=1 arriving before wireSeq=0
+      // was ever satisfied (e.g. a duplicated/out-of-order packet from a prior request).
+      link.emitMessage('MISSION_ITEM_INT', { seq: 1, command: common.MavCmd.NAV_WAYPOINT, x: 1, y: 1, z: 1 })
+      // Ignored: still expecting wireSeq=0, no new request sent (last sent is still the seq=0 request).
+      expect(lastSent(link)).toBe(req)
+
+      link.emitMessage('MISSION_ITEM_INT', { seq: 0, command: common.MavCmd.NAV_WAYPOINT, x: 0, y: 0, z: 0 })
+      req = lastSent(link) as common.MissionRequestInt
+      expect(req.seq).toBe(1)
+
+      link.emitMessage('MISSION_ITEM_INT', {
+        seq: 1,
+        command: common.MavCmd.NAV_TAKEOFF,
+        x: 473970000,
+        y: 85450000,
+        z: 20,
+      })
+
+      const items = await promise
+      expect(items).toEqual([{ seq: 0, command: 'TAKEOFF', lat: 47.397, lng: 8.545, altM: 20 }])
     })
 
     it('resolves [] immediately on MISSION_COUNT count=0', async () => {

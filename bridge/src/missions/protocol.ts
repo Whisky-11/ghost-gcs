@@ -301,6 +301,7 @@ export function makeMissionProtocol(deps: MissionUploadDeps): {
         }
         if (msg.msgName === 'MISSION_ITEM_INT') {
           const wireSeq = msg.data.seq as number
+          if (wireSeq !== nextWireSeq) return // stale/dup item (doesn't match what we just requested) — ignore
           if (wireSeq > 0) {
             items.push(fromMissionItemInt(msg.data, wireSeq - 1))
           } // wireSeq === 0 is the home slot — fetched (protocol requires it) but dropped
