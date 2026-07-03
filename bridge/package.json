@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "node-mavlink": "^2.3.0",
-    "mavlink-mappings": "^1.0.22-20260311",
+    "mavlink-mappings": "^1.0.21-20250824-1",
     "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
