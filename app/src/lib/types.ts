@@ -187,3 +187,10 @@ export const TAKEOFF_ALT_MAX = 120
 // editor call sites rather than duplicating the literal 2/120 constants.
 export const MISSION_ALT_MIN = TAKEOFF_ALT_MIN
 export const MISSION_ALT_MAX = TAKEOFF_ALT_MAX
+
+// Hard take-cap on mission item arrays (bridge/src/missions/model.ts's
+// MISSION_MAX_ITEMS) — mirrored here so the app can gate an oversized
+// mission (a bad AI draft, a runaway survey grid) client-side too, same
+// defense-in-depth pairing as the altitude bounds above. The bridge still
+// owns the authoritative enforcement (schema.ts's `.max()` + validateMission).
+export const MISSION_MAX_ITEMS = 1000

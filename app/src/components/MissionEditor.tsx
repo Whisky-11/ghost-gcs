@@ -229,6 +229,11 @@ export function MissionEditor({
               max={MISSION_ALT_MAX}
               value={surveyAltInput}
               onChange={(e) => setSurveyAltInput(e.target.value)}
+              onBlur={() => {
+                const parsed = Number(surveyAltInput)
+                const clamped = Number.isFinite(parsed) ? Math.min(MISSION_ALT_MAX, Math.max(MISSION_ALT_MIN, parsed)) : defaultAltM
+                setSurveyAltInput(String(clamped))
+              }}
               style={inputStyle}
             />
           </label>
