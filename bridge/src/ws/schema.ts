@@ -80,7 +80,9 @@ export type RpcMethod = z.infer<typeof rpcMethodSchema>
 
 const rpcParamsSchema = z.object({
   mode: z.string().optional(),
-  altM: z.number().optional(),
+  // Bounded to match the plan's Task 9 UI clamp (2-120m) — defense in depth
+  // alongside commands.ts's runtime BAD_PARAM guard.
+  altM: z.number().min(2).max(120).optional(),
 })
 
 export const rpcRequestSchema = z

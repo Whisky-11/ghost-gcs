@@ -160,6 +160,18 @@ describe('commands', () => {
       expect(link.sent).toHaveLength(0)
     })
 
+    it('rejects with BAD_PARAM for altM below the 2m floor, without sending', async () => {
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: true, mode: 'GUIDED' }))
+      await expect(commands.takeoff(1)).rejects.toMatchObject({ code: 'BAD_PARAM' })
+      expect(link.sent).toHaveLength(0)
+    })
+
+    it('rejects with BAD_PARAM for altM above the 120m ceiling, without sending', async () => {
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: true, mode: 'GUIDED' }))
+      await expect(commands.takeoff(121)).rejects.toMatchObject({ code: 'BAD_PARAM' })
+      expect(link.sent).toHaveLength(0)
+    })
+
     it('throws NOT_CONNECTED when link is disconnected', async () => {
       link.connected = false
       const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: true, mode: 'GUIDED' }))

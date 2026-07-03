@@ -14,6 +14,7 @@ export class CommandError extends Error {
       | 'ALREADY_ARMED'
       | 'NOT_ARMED'
       | 'BAD_MODE'
+      | 'BAD_PARAM'
       | 'MODE_UNKNOWN'
       | 'ACK_FAILED'
       | 'ACK_TIMEOUT',
@@ -156,6 +157,9 @@ export function makeCommands(deps: CommandDeps): {
 
   async function takeoff(altM: number): Promise<void> {
     assertConnected(deps)
+    if (altM < 2 || altM > 120) {
+      throw new CommandError('BAD_PARAM', `takeoff altM must be between 2 and 120 (got ${altM})`)
+    }
     const state = deps.getState()
     if (state.vehicleType !== 'copter' || !state.armed || state.mode !== 'GUIDED') {
       throw new CommandError('BAD_MODE', 'takeoff requires vehicleType=copter, armed=true, mode=GUIDED')
