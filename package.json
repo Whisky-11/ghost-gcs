@@ -12,7 +12,8 @@
   },
   "pnpm": {
     "overrides": {
-      "xml2js": "^0.6.2"
+      "xml2js": "^0.6.2",
+      "postcss": "^8.5.10"
     }
   }
 }
