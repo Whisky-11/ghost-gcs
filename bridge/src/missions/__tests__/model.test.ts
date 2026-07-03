@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateMission, missionWarnings, type Mission, type MissionItem } from '../model.js'
+import { validateMission, missionWarnings, MISSION_MAX_ITEMS, type Mission, type MissionItem } from '../model.js'
 
 function item(partial: Partial<MissionItem> & Pick<MissionItem, 'seq' | 'command'>): MissionItem {
   return { lat: 47.3977, lng: 8.5456, altM: 20, ...partial }
@@ -110,6 +110,29 @@ describe('validateMission', () => {
       items: [item({ seq: 0, command: 'TAKEOFF' }), item({ seq: 1, command: 'LAND' })],
     }
     expect(validateMission(m)).toEqual({ ok: true })
+  })
+
+  // Hard take-cap on external-input arrays (scaling rule) — a mission this
+  // large is not a real flight plan.
+  function itemsOfLength(n: number): MissionItem[] {
+    const items: MissionItem[] = [item({ seq: 0, command: 'TAKEOFF' })]
+    for (let seq = 1; seq < n - 1; seq++) {
+      items.push(item({ seq, command: 'WAYPOINT' }))
+    }
+    items.push(item({ seq: n - 1, command: 'RTL' }))
+    return items
+  }
+
+  it(`accepts a mission with exactly ${MISSION_MAX_ITEMS} items`, () => {
+    const m: Mission = { items: itemsOfLength(MISSION_MAX_ITEMS) }
+    expect(validateMission(m)).toEqual({ ok: true })
+  })
+
+  it(`rejects a mission with ${MISSION_MAX_ITEMS + 1} items`, () => {
+    const m: Mission = { items: itemsOfLength(MISSION_MAX_ITEMS + 1) }
+    const result = validateMission(m)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toMatch(new RegExp(`exceeds max of ${MISSION_MAX_ITEMS}`))
   })
 })
 

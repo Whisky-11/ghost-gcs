@@ -4,6 +4,13 @@
 // that bridge and app stay independently deployable (no cross-import).
 export const MISSION_ALT_MIN_M = 2
 export const MISSION_ALT_MAX_M = 120
+// Hard take-cap on external-input arrays (scaling-from-day-1 rule) — a
+// mission this large is not a real flight plan and would otherwise let an
+// unbounded payload (malicious or buggy AI draft/import) reach validation
+// and, eventually, the vehicle. Enforced in both layers: schema.ts's
+// missionSchema.items (structural, wire-level) and here (semantic, same
+// defense-in-depth pairing as the altM bound).
+export const MISSION_MAX_ITEMS = 1000
 
 export type MissionItemCommand = 'WAYPOINT' | 'TAKEOFF' | 'RTL' | 'LAND'
 
@@ -23,13 +30,18 @@ const TERMINAL_COMMANDS: ReadonlySet<MissionItemCommand> = new Set(['RTL', 'LAND
 const ALT_BOUNDED_COMMANDS: ReadonlySet<MissionItemCommand> = new Set(['TAKEOFF', 'WAYPOINT'])
 
 /** Validates structural + safety rules. Returns the first violation found
- * (order: empty → seq contiguity → alt bounds → terminal-item placement) —
- * callers surface one clear error rather than a list. */
+ * (order: empty → too many items → seq contiguity → alt bounds →
+ * terminal-item placement) — callers surface one clear error rather than a
+ * list. */
 export function validateMission(m: Mission): { ok: true } | { ok: false; error: string } {
   const { items } = m
 
   if (items.length === 0) {
     return { ok: false, error: 'mission must have at least one item' }
+  }
+
+  if (items.length > MISSION_MAX_ITEMS) {
+    return { ok: false, error: `mission has ${items.length} items, exceeds max of ${MISSION_MAX_ITEMS}` }
   }
 
   const seqError = validateSeqContiguity(items)

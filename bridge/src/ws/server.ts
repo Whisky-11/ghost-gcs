@@ -24,7 +24,7 @@ import {
 } from '../ai/features.js'
 import { CommandError } from '../commands/commands.js'
 import { CONFIG } from '../config.js'
-import { validateMission, type MissionItem } from '../missions/model.js'
+import { validateMission, MISSION_MAX_ITEMS, type MissionItem } from '../missions/model.js'
 import { MissionError } from '../missions/protocol.js'
 import { generateSurveyGrid, type LatLng } from '../missions/survey.js'
 import type { TelemetryState } from '../state/telemetry.js'
@@ -276,16 +276,28 @@ async function dispatch(opts: StartWsServerOptions, req: RpcRequest): Promise<un
       return undefined
     case 'downloadMission':
       return await missions.download()
-    case 'surveyGrid':
+    case 'surveyGrid': {
       // Pure geometry (missions/survey.ts) — no AI, no I/O. superRefine
       // guarantees polygon (>=3 pts)/altM/spacingM are present once
-      // validation has passed for method==='surveyGrid'.
-      return generateSurveyGrid({
+      // validation has passed for method==='surveyGrid'. Unlike
+      // uploadMission, the *input* here (a polygon + spacing) isn't itself
+      // bounded by MISSION_MAX_ITEMS — a tight spacing over a large polygon
+      // can still generate an oversized grid, so the hard take-cap is
+      // enforced on the generator's *output* instead.
+      const grid = generateSurveyGrid({
         polygon: req.params!.polygon! as LatLng[],
         altM: req.params!.altM!,
         spacingM: req.params!.spacingM!,
         headingDeg: req.params!.headingDeg,
       })
+      if (grid.length > MISSION_MAX_ITEMS) {
+        throw new RpcValidationError(
+          'SURVEY_TOO_LARGE',
+          `survey grid has ${grid.length} waypoints, exceeds max of ${MISSION_MAX_ITEMS} — increase spacingM or shrink the polygon`,
+        )
+      }
+      return grid
+    }
     case 'aiDraftMission':
       return dispatchAiDraftMission(ai, req)
     case 'aiNarrate':

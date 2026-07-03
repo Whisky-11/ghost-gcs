@@ -8,7 +8,13 @@
 // the compile-time AssertEqual check at the bottom) so a drift between the reducer
 // shape and the wire shape fails typecheck instead of failing silently at runtime.
 import { z } from 'zod'
-import { MISSION_ALT_MIN_M, MISSION_ALT_MAX_M, type Mission, type MissionItem } from '../missions/model.js'
+import {
+  MISSION_ALT_MIN_M,
+  MISSION_ALT_MAX_M,
+  MISSION_MAX_ITEMS,
+  type Mission,
+  type MissionItem,
+} from '../missions/model.js'
 import type { LatLng } from '../missions/survey.js'
 import type { TelemetryState } from '../state/telemetry.js'
 import type { Alert } from '../watchdog/rules.js'
@@ -113,8 +119,11 @@ const missionItemSchema = z.object({
   lng: z.number(),
   altM: z.number(),
 })
+// Hard take-cap (scaling-from-day-1 rule) mirroring missions/model.ts's
+// MISSION_MAX_ITEMS — structural gate here, semantic gate in
+// validateMission (defense in depth, same pairing as the altM bound).
 const missionSchema = z.object({
-  items: z.array(missionItemSchema),
+  items: z.array(missionItemSchema).max(MISSION_MAX_ITEMS),
 })
 
 // client -> server: rpc request

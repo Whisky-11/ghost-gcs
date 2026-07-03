@@ -364,6 +364,35 @@ describe('startWsServer', () => {
     ws.close()
   })
 
+  it('rejects surveyGrid whose generated grid exceeds the mission item cap with SURVEY_TOO_LARGE', async () => {
+    // A ~20km-wide square swept at 5m spacing generates well over 1000
+    // waypoints — the hard take-cap (scaling-from-day-1 rule) applies to the
+    // generator's *output*, not the polygon/spacing input, since a small
+    // input can still expand into an oversized grid.
+    const polygon = [
+      { lat: 29.2, lng: 47.8 },
+      { lat: 29.4, lng: 47.8 },
+      { lat: 29.4, lng: 48.0 },
+      { lat: 29.2, lng: 48.0 },
+    ]
+    const ws = await connectClient(port)
+    await nextMessage(ws)
+    ws.send(
+      JSON.stringify({
+        type: 'rpc',
+        id: 'g3',
+        method: 'surveyGrid',
+        params: { polygon, altM: 30, spacingM: 5, headingDeg: 0 },
+      }),
+    )
+    const reply = await nextMessage(ws)
+    expect(reply).toMatchObject({ type: 'rpc_result', id: 'g3', ok: false, code: 'SURVEY_TOO_LARGE' })
+    // Pure — never touches commands or missions even on rejection.
+    expect(commands.calls).toHaveLength(0)
+    expect(missions.calls).toHaveLength(0)
+    ws.close()
+  })
+
   // --- Task 7: AI RPCs + the AI-never-commands invariant -------------------
 
   it('aiDraftMission returns draft data via the injected fake ClaudeHeadless and NEVER touches commands/missions/link', async () => {
