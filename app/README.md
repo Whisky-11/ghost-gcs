@@ -1,4 +1,4 @@
-# Falcon GCS — app
+# GHOST GCS — app
 
 Next.js 16 / React 19 GCS UI. Connects to the `bridge/` WebSocket server
 (`ws://localhost:8090` by default, override via `NEXT_PUBLIC_BRIDGE_WS_URL`)

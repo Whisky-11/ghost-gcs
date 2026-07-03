@@ -18,11 +18,20 @@ sim/run.sh copter   # arducopter, model=quad
 sim/run.sh rover     # ardurover, model=rover
 ```
 
-`run.sh` builds the `falcon-sitl` image once (if not already built) then runs it:
+`run.sh` builds the `ghost-sitl` image once (if not already built) then runs it:
 
 ```bash
-docker build -t falcon-sitl sim/
-docker run --rm -p 5760:5760 --name falcon-sitl falcon-sitl copter   # or rover
+docker build -t ghost-sitl sim/
+docker run --rm -p 5760:5760 --name ghost-sitl ghost-sitl copter   # or rover
+```
+
+**Existing local builds:** the image was previously tagged `falcon-sitl`
+(pre-rename). `run.sh` falls back to a local `falcon-sitl` image if no
+`ghost-sitl` image exists yet, so nothing breaks — but to adopt the new name
+without a ~15-20 min rebuild, just retag the image you already have:
+
+```bash
+docker tag falcon-sitl ghost-sitl
 ```
 
 Home location is pinned to Kuwait (`29.3375,47.9744,10,0`). The container's
@@ -50,13 +59,13 @@ attached).
 
 ## Swapping vehicle types (copter ↔ rover)
 
-SITL is **single-client on TCP 5760** — only one `falcon-sitl` container can
+SITL is **single-client on TCP 5760** — only one `ghost-sitl` container can
 hold the port at a time, and only the copter *or* rover binary runs inside a
 given container run. To swap:
 
 ```bash
-docker stop falcon-sitl   # (or docker rm -f, if it's not --rm-removing itself)
-sim/run.sh rover          # new container, same port
+docker stop ghost-sitl   # (or docker rm -f, if it's not --rm-removing itself)
+sim/run.sh rover         # new container, same port
 ```
 
 The bridge does **not** need to be restarted — `VehicleLink`'s existing 2s

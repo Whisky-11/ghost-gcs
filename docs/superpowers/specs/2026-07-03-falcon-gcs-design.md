@@ -1,5 +1,7 @@
 # Falcon GCS — Design Spec
 
+> Project renamed Falcon → GHOST (2026-07-03, Ahmad). Falcon references below are historical.
+
 **Date:** 2026-07-03 · **Owner:** Ahmad Sharaf (personal passion project) · **Status:** Approved (conversation 2026-07-03)
 
 ## What this is
