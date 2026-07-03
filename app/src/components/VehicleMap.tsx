@@ -7,6 +7,7 @@ import type { LatLng, Mission, MissionItem, RpcMethod, RpcParams, TelemetryState
 import { TAKEOFF_ALT_DEFAULT } from '@/lib/controls'
 import { initialMissionEditorState, missionEditorReducer } from '@/lib/mission'
 import MissionOverlay from './MissionOverlay'
+import GhostDraftOverlay from './GhostDraftOverlay'
 import { MissionEditor } from './MissionEditor'
 
 // CARTO dark-matter basemap — free tier, attribution required. The Map
@@ -43,9 +44,34 @@ interface VehicleMapProps {
    * Optional so VehicleMap stays fully self-contained/functional without a
    * consumer wired up yet. */
   onMissionChange?: (mission: Mission) => void
+  /** Task 10: fired with the current in-progress survey polygon every time
+   * it changes — GhostPanel.tsx (hosted in page.tsx, outside this
+   * component) needs it to build the geometry sent with "draft from
+   * drawing". Same "lifted escape hatch" pattern as onMissionChange. */
+  onPolygonPointsChange?: (points: LatLng[]) => void
+  /** Task 10: GHOST's current mission-draft preview (empty when there is no
+   * active draft) — rendered as a dashed, visually-distinct overlay via
+   * GhostDraftOverlay, separate from the committed mission MissionOverlay
+   * renders. Owned by GhostPanel.tsx's ghost.ts state, lifted through
+   * page.tsx; this component only displays it. */
+  draftPreviewItems?: MissionItem[]
+  /** Task 10: GHOST's "Load into editor" writes here — an incrementing
+   * `requestId` so the same items can be (re-)loaded even if their array
+   * reference is unchanged. VehicleMap dispatches `setMissionItems` locally
+   * on a new requestId; this is a PURE EDITOR MUTATION, never an rpc call —
+   * GHOST has no other path into the working mission (spec safety
+   * invariant 1: AI never uploads — see GhostPanel.tsx's module header). */
+  loadMissionRequest?: { items: MissionItem[]; requestId: string } | null
 }
 
-export default function VehicleMap({ state, rpc, onMissionChange }: VehicleMapProps) {
+export default function VehicleMap({
+  state,
+  rpc,
+  onMissionChange,
+  onPolygonPointsChange,
+  draftPreviewItems,
+  loadMissionRequest,
+}: VehicleMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const vehicleMarkerRef = useRef<maplibregl.Marker | null>(null)
@@ -80,6 +106,22 @@ export default function VehicleMap({ state, rpc, onMissionChange }: VehicleMapPr
   useEffect(() => {
     onMissionChange?.(editor.mission)
   }, [editor.mission, onMissionChange])
+
+  useEffect(() => {
+    onPolygonPointsChange?.(editor.polygonPoints)
+  }, [editor.polygonPoints, onPolygonPointsChange])
+
+  // GHOST's "Load into editor" (Task 10) — a local mutation only, keyed by
+  // requestId so the same draft can be loaded again even if its items array
+  // reference is unchanged (e.g. the operator re-loads after tweaking
+  // nothing). Never triggers an rpc call; this is the exact same
+  // 'setMissionItems' action the survey-grid generator dispatches.
+  const lastLoadedRequestIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!loadMissionRequest || loadMissionRequest.requestId === lastLoadedRequestIdRef.current) return
+    lastLoadedRequestIdRef.current = loadMissionRequest.requestId
+    dispatch({ type: 'setMissionItems', items: loadMissionRequest.items })
+  }, [loadMissionRequest])
 
   // Map lifecycle: created once on mount, destroyed on unmount.
   useEffect(() => {
@@ -226,6 +268,7 @@ export default function VehicleMap({ state, rpc, onMissionChange }: VehicleMapPr
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <MissionOverlay map={mapInstance} styleLoaded={styleLoaded} mission={editor.mission} polygonPoints={editor.polygonPoints} />
+      <GhostDraftOverlay map={mapInstance} styleLoaded={styleLoaded} items={draftPreviewItems ?? []} />
       <MissionEditor
         mode={editor.mode}
         mission={editor.mission}

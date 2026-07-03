@@ -10,8 +10,9 @@ import { Tapes } from '@/components/instruments/Tapes'
 import { FlightControls } from '@/components/FlightControls'
 import { MissionControls } from '@/components/MissionControls'
 import { AlertsPanel } from '@/components/AlertsPanel'
+import { GhostPanel } from '@/components/GhostPanel'
 import { Toasts } from '@/components/Toasts'
-import type { Mission } from '@/lib/types'
+import type { LatLng, Mission, MissionItem } from '@/lib/types'
 
 // maplibre-gl touches window/document at module load — must stay client-only
 // (ssr:false requires the dynamic() call to live in a Client Component, per
@@ -36,6 +37,31 @@ export default function Home() {
   const handleMissionChange = useCallback((next: Mission) => {
     setMission(next)
     setMissionUploaded(false)
+  }, [])
+
+  // Task 10: GHOST advisory panel state, lifted here so it can talk to both
+  // VehicleMap (for map rendering) and GhostPanel (which produces it) —
+  // neither of them is an ancestor/descendant of the other.
+  //
+  // Current in-progress survey polygon, mirrored up from VehicleMap's
+  // editor state — GhostPanel needs it to build "draft from drawing"'s
+  // geometry.
+  const [polygonPoints, setPolygonPoints] = useState<LatLng[]>([])
+  // GHOST's current mission-draft preview (dashed overlay) — set by
+  // GhostPanel whenever its draft request resolves/clears, consumed by
+  // VehicleMap's GhostDraftOverlay.
+  const [draftPreviewItems, setDraftPreviewItems] = useState<MissionItem[]>([])
+  // GHOST's "Load into editor" request — a PURE LOCAL MUTATION (never an
+  // rpc call): GhostPanel calls onLoadIntoEditor with the draft's items,
+  // this wraps them with a fresh requestId, and VehicleMap dispatches
+  // `setMissionItems` into its own editor reducer on receiving a new one.
+  // AI never uploads (spec safety invariant 1) — the human then reviews +
+  // uploads the loaded mission via MissionControls below, same as any
+  // manually-built or survey-generated mission.
+  const [loadMissionRequest, setLoadMissionRequest] = useState<{ items: MissionItem[]; requestId: string } | null>(null)
+
+  const handleLoadDraftIntoEditor = useCallback((items: MissionItem[]) => {
+    setLoadMissionRequest({ items, requestId: crypto.randomUUID() })
   }, [])
 
   return (
@@ -64,7 +90,14 @@ export default function Home() {
       </header>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-          <VehicleMap state={state} rpc={rpc} onMissionChange={handleMissionChange} />
+          <VehicleMap
+            state={state}
+            rpc={rpc}
+            onMissionChange={handleMissionChange}
+            onPolygonPointsChange={setPolygonPoints}
+            draftPreviewItems={draftPreviewItems}
+            loadMissionRequest={loadMissionRequest}
+          />
         </div>
         <aside
           style={{
@@ -93,6 +126,13 @@ export default function Home() {
             rpc={rpc}
           />
           <AlertsPanel alerts={alerts} rpc={rpc} />
+          <GhostPanel
+            rpc={rpc}
+            polygonPoints={polygonPoints}
+            mission={mission}
+            onDraftItemsChange={setDraftPreviewItems}
+            onLoadIntoEditor={handleLoadDraftIntoEditor}
+          />
         </aside>
       </div>
       <Toasts />
