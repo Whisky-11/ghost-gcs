@@ -3,8 +3,8 @@ import './globals.css'
 
 // English-only UI (plan's Global Constraints — deliberate, no i18n layer).
 export const metadata: Metadata = {
-  title: 'Falcon GCS',
-  description: 'Falcon GCS — live ground control station',
+  title: 'GHOST GCS',
+  description: 'GHOST GCS — live ground control station',
 }
 
 export default function RootLayout({

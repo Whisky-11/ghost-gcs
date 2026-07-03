@@ -1,5 +1,7 @@
 # Falcon GCS — P0 Foundations Implementation Plan
 
+> Project renamed Falcon → GHOST (2026-07-03, Ahmad). Falcon references below are historical.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A simulated ArduPilot vehicle flying on screen under our own GCS — SITL + MAVLink bridge (link/state/commands/WS) + Next.js app (map/instruments/flight controls).

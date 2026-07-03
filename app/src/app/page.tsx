@@ -31,7 +31,7 @@ export default function Home() {
           flexWrap: 'wrap',
         }}
       >
-        <strong style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent)' }}>FALCON GCS</strong>
+        <strong style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent)' }}>GHOST GCS</strong>
         <StatusChips
           mode={state?.mode ?? null}
           armed={state?.armed ?? null}

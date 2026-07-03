@@ -1,4 +1,4 @@
-# Falcon GCS — Golden Path Runbook
+# GHOST GCS — Golden Path Runbook
 
 This is the exact procedure to fly a simulated vehicle end-to-end through our
 own GCS: ArduPilot SITL (Docker) → `bridge/` (MAVLink↔WebSocket daemon) →
@@ -11,19 +11,19 @@ each golden path below for the actual captured output.
 - Docker Desktop or OrbStack running (arm64-native build, no Rosetta).
 - Node 22 (`.nvmrc`), pnpm 9 (`corepack enable` or `npm i -g pnpm@9`).
 - `pnpm install` once at the repo root.
-- The `falcon-sitl` Docker image built once — `sim/run.sh copter` builds it
+- The `ghost-sitl` Docker image built once — `sim/run.sh copter` builds it
   automatically the first time it's missing (~15–20 min, compiles ArduPilot
   from source). Subsequent runs reuse the cached image.
 
 ## Carry-note before ANY run
 
-SITL is **single-client** on TCP `5760` — only one `falcon-sitl` container
+SITL is **single-client** on TCP `5760` — only one `ghost-sitl` container
 may hold that port at a time, and only one bridge process should be talking
 to it. Before starting anything:
 
 ```bash
 pkill -f 'tsx.*bridge/src/index.ts'; pkill -f 'tsx watch'
-docker rm -f falcon-sitl 2>/dev/null
+docker rm -f ghost-sitl falcon-sitl 2>/dev/null
 ```
 
 This clears stray bridge processes from a previous session (a crashed
@@ -50,7 +50,7 @@ common cause of "nothing connects" — see the troubleshooting table.
    arrives; instruments and flight controls come alive as soon as the WS
    connection opens (`wsStatus` badge in the header flips to `open`).
 
-To stop: `Ctrl-C` in terminals 2 and 3, `docker stop falcon-sitl` (or
+To stop: `Ctrl-C` in terminals 2 and 3, `docker stop ghost-sitl` (or
 `Ctrl-C` in terminal 1 if run in the foreground — the container is `--rm`
 and removes itself on stop).
 
@@ -132,7 +132,7 @@ mode dropdown repopulates from the rover mode table
 ### Evidence (executed 2026-07-03, live SITL rover)
 
 ```
-docker stop falcon-sitl              # copter container down
+docker stop ghost-sitl                # copter container down
 sim/run.sh rover                     # new container, same TCP 5760
 ```
 
@@ -188,10 +188,10 @@ pnpm audit --prod          # 0 vulnerabilities at every severity
 | Symptom | Cause | Fix |
 |---|---|---|
 | Bridge hangs on `connecting to SITL...` forever / `HeartbeatTimeoutError` after 15s | SITL container isn't up yet, or Docker/OrbStack isn't running | Start `sim/run.sh copter\|rover` first and wait for `"Waiting for internal clock bits to be set"` in its logs before starting the bridge; the bridge itself retries `connect()` every 5s on a cold start so it recovers once SITL is up |
-| `EADDRINUSE` on port `5760`, or a second `sim/run.sh` refuses to start | A previous `falcon-sitl` container (or stray SITL process) is still holding the port — **SITL is single-client, only one container may bind 5760** | `docker rm -f falcon-sitl` before starting a new one; check `lsof -i :5760` for anything else bound there |
+| `EADDRINUSE` on port `5760`, or a second `sim/run.sh` refuses to start | A previous `ghost-sitl` container (or stray SITL process) is still holding the port — **SITL is single-client, only one container may bind 5760** | `docker rm -f ghost-sitl falcon-sitl` before starting a new one; check `lsof -i :5760` for anything else bound there |
 | Bridge won't reconnect after swapping copter↔rover, or telemetry looks stuck | An old `tsx watch` bridge process from a previous terminal/session is still running and holding its own stale TCP connection/ws port | `pkill -f 'tsx.*bridge/src/index.ts'; pkill -f 'tsx watch'` then restart `pnpm --filter bridge dev` fresh — **always do this before any run**, per the carry-note above |
 | `EADDRINUSE` on `8090` (ws) or `3000` (app) | A previous bridge/app dev process from an earlier session is still alive | `lsof -ti :8090 \| xargs kill -9` / `lsof -ti :3000 \| xargs kill -9`, or the `pkill` command above for the bridge |
 | App's header WS status badge stuck on `connecting`/flaps `open`→`closed`→`connecting` | Bridge isn't running, crashed, or was restarted — `lib/ws.ts`'s client auto-reconnects every 2s once the bridge comes back, no app restart needed | Check terminal 2 for the bridge process/logs; once `ws server listening` reappears the app reconnects on its own within ~2s |
 | `arm` rejected with `ACK_FAILED ... MAV_RESULT=4` right after SITL boots (fresh boot or after a copter↔rover container swap) | ArduPilot's own pre-arm check: `"PreArm: Need Position Estimate"` — EKF/GPS hasn't converged yet | Wait ~10–20s after the vehicle's first HEARTBEAT for GPS 3D fix + `"EKF3 ... is using GPS"` status texts before arming; this is correct safety behavior, not a bug |
 | Map tiles don't load / grey background in `VehicleMap` | No internet access to the tile server (MapLibre dark style is a hosted vector tile source, not bundled) | Expected in offline/sandboxed environments — the map still renders the vehicle marker/track on the (blank) canvas; telemetry, instruments, and controls are unaffected since they don't depend on tile availability |
-| `docker build` for `falcon-sitl` takes 15–20+ minutes | First build compiles ArduPilot from source (git clone + submodules + `./waf configure && ./waf copter rover`) | Expected once; subsequent runs reuse the cached image unless `sim/Dockerfile` changes. See `sim/README.md`'s native-macOS-build fallback if Docker itself is the blocker |
+| `docker build` for `ghost-sitl` takes 15–20+ minutes | First build compiles ArduPilot from source (git clone + submodules + `./waf configure && ./waf copter rover`) | Expected once; subsequent runs reuse the cached image unless `sim/Dockerfile` changes. See `sim/README.md`'s native-macOS-build fallback if Docker itself is the blocker |

@@ -9,3 +9,10 @@ packages:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# Dual-write of the root package.json's `pnpm.overrides` — pnpm 9.12 (this
+# repo's pinned version) reads overrides from package.json; pnpm 10 moved
+# the field here. Keep both in sync until we bump pnpm.
+overrides:
+  xml2js: ^0.6.2
+  postcss: ^8.5.10
