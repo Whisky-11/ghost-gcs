@@ -10,6 +10,14 @@ const CENTER = SIZE / 2
 const PX_PER_DEG_PITCH = 3
 const MAX_PITCH_TRANSLATE = 90
 
+// Sky/ground rect geometry, exported so the "no gap at the horizon" invariant
+// is testable without a DOM: SKY_RECT's bottom edge (y + height) must equal
+// CENTER, meeting GROUND_RECT's top edge (y) exactly. Both rects live inside
+// the same rotate+translate <g> (see JSX below), so they move together —
+// this boundary is invariant across every pitch/roll value, not just at 0.
+export const SKY_RECT = { x: -SIZE, y: -SIZE * 2, width: SIZE * 3, height: SIZE * 2 + CENTER }
+export const GROUND_RECT = { x: -SIZE, y: CENTER, width: SIZE * 3, height: SIZE * 2 }
+
 interface AttitudeIndicatorProps {
   rollDeg: number | null
   pitchDeg: number | null
@@ -32,8 +40,8 @@ export function AttitudeIndicator({ rollDeg, pitchDeg }: AttitudeIndicatorProps)
         <g clipPath="url(#ai-disc-clip)">
           {/* Rotated by roll, translated by pitch — oversized so rotation never reveals a gap. */}
           <g transform={`rotate(${-roll} ${CENTER} ${CENTER}) translate(0 ${translateY})`}>
-            <rect x={-SIZE} y={-SIZE * 2} width={SIZE * 3} height={SIZE * 2} fill="#1d4ed8" />
-            <rect x={-SIZE} y={CENTER} width={SIZE * 3} height={SIZE * 2} fill="#78350f" />
+            <rect {...SKY_RECT} fill="#1d4ed8" />
+            <rect {...GROUND_RECT} fill="#78350f" />
             <line x1={-SIZE} y1={CENTER} x2={SIZE * 2} y2={CENTER} stroke="#f9fafb" strokeWidth={2} />
             {/* Pitch ladder ticks every 10deg from -30 to +30 */}
             {[-30, -20, -10, 10, 20, 30].map((deg) => (
