@@ -50,7 +50,7 @@ describe('missionDraftSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects an item with altM exactly at the boundary edges (2 and 120 are inclusive)', () => {
+  it('accepts an item with altM exactly at the boundary edges (2 and 120 are inclusive)', () => {
     const draft = {
       ...validDraft,
       items: [

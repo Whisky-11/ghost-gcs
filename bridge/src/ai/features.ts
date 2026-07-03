@@ -213,15 +213,27 @@ export interface FlightStats {
  *     re-derive alerts from telemetry.
  */
 export function computeFlightStats(samples: TelemetryState[], alerts: Alert[]): FlightStats {
-  const heartbeatTimes = samples
-    .map((s) => s.lastHeartbeatMs)
-    .filter((t): t is number => t !== null)
-  const durationSec = heartbeatTimes.length >= 2 ? (Math.max(...heartbeatTimes) - Math.min(...heartbeatTimes)) / 1000 : 0
+  // Manual min/max reduce over lastHeartbeatMs — NOT Math.max(...heartbeatTimes)/
+  // Math.min(...heartbeatTimes): a large sample buffer (this feeds off a rolling
+  // ~600-sample telemetry ring per the WS wiring, and could grow beyond that in
+  // pathological cases) spread into Math.max/Math.min's argument list risks a
+  // "Maximum call stack size exceeded" — the spread form was flagged in Task 6
+  // review and replaced here with a single-pass loop, matching the maxAltM/
+  // maxGroundMps accumulator pattern below.
+  let minHeartbeatMs = Infinity
+  let maxHeartbeatMs = -Infinity
+  let heartbeatCount = 0
+  for (const s of samples) {
+    if (s.lastHeartbeatMs === null) continue
+    heartbeatCount++
+    if (s.lastHeartbeatMs < minHeartbeatMs) minHeartbeatMs = s.lastHeartbeatMs
+    if (s.lastHeartbeatMs > maxHeartbeatMs) maxHeartbeatMs = s.lastHeartbeatMs
+  }
+  const durationSec = heartbeatCount >= 2 ? (maxHeartbeatMs - minHeartbeatMs) / 1000 : 0
 
   let maxAltM = 0
   let maxGroundMps = 0
   let minBatteryPct = 100
-  let sawBattery = false
   const modeChanges: string[] = []
   let lastMode = ''
   let wasAuto = false
@@ -230,10 +242,7 @@ export function computeFlightStats(samples: TelemetryState[], alerts: Alert[]): 
   for (const s of samples) {
     if (s.position && s.position.relAltM > maxAltM) maxAltM = s.position.relAltM
     if (s.speed && s.speed.groundMps > maxGroundMps) maxGroundMps = s.speed.groundMps
-    if (s.battery) {
-      sawBattery = true
-      if (s.battery.remainingPct < minBatteryPct) minBatteryPct = s.battery.remainingPct
-    }
+    if (s.battery && s.battery.remainingPct < minBatteryPct) minBatteryPct = s.battery.remainingPct
     if (s.mode && s.mode !== lastMode) {
       modeChanges.push(s.mode)
       lastMode = s.mode
@@ -242,8 +251,6 @@ export function computeFlightStats(samples: TelemetryState[], alerts: Alert[]): 
     if (isAuto && !wasAuto) waypointsFlown++
     wasAuto = isAuto
   }
-
-  if (!sawBattery) minBatteryPct = 100
 
   return {
     durationSec,
