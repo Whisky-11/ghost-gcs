@@ -197,4 +197,36 @@ describe('commands', () => {
       expect(link.sent).toHaveLength(0)
     })
   })
+
+  describe('startMission', () => {
+    it('copter+armed: delegates to setMode("AUTO") and resolves on ACK', async () => {
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: true }))
+      const promise = commands.startMission()
+      expect(link.sent[0]!.command).toBe(common.MavCmd.DO_SET_MODE)
+      expect(link.sent[0]!._param2).toBe(3) // COPTER_MODES[3] === 'AUTO'
+      link.ack(common.MavCmd.DO_SET_MODE, common.MavResult.ACCEPTED)
+      await expect(promise).resolves.toBeUndefined()
+    })
+
+    it('copter+not armed: rejects with NOT_ARMED without sending', async () => {
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: false }))
+      await expect(commands.startMission()).rejects.toMatchObject({ code: 'NOT_ARMED' })
+      expect(link.sent).toHaveLength(0)
+    })
+
+    it('rover: does not require armed, delegates to setMode("AUTO")', async () => {
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'rover', armed: false }))
+      const promise = commands.startMission()
+      expect(link.sent[0]!._param2).toBe(10) // ROVER_MODES[10] === 'AUTO'
+      link.ack(common.MavCmd.DO_SET_MODE, common.MavResult.ACCEPTED)
+      await expect(promise).resolves.toBeUndefined()
+    })
+
+    it('throws NOT_CONNECTED when link is disconnected', async () => {
+      link.connected = false
+      const commands = makeCommands(makeDeps(link, { vehicleType: 'copter', armed: true }))
+      await expect(commands.startMission()).rejects.toMatchObject({ code: 'NOT_CONNECTED' })
+      expect(link.sent).toHaveLength(0)
+    })
+  })
 })
