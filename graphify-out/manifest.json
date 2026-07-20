@@ -1,0 +1,330 @@
+{
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/next-env.d.ts": {
+    "mtime": 1783090931.381393,
+    "hash": "d0f8375ae1199dc7acd3977fc33b78b8"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/vitest.config.ts": {
+    "mtime": 1783051845.6406226,
+    "hash": "c2ca0fef33283815b6e456d921a8a013"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/eslint.config.mjs": {
+    "mtime": 1783051845.636393,
+    "hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/next.config.ts": {
+    "mtime": 1783051845.6365116,
+    "hash": "9b77af189a21a7a64e4bd7a426f64176"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/app/layout.tsx": {
+    "mtime": 1783052131.2179897,
+    "hash": "12bb461b44709291e8a4677c4a978fbe"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/app/page.tsx": {
+    "mtime": 1783074330.4710925,
+    "hash": "b1fe7e5f05cb82398648a667afa495bb"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/Toasts.tsx": {
+    "mtime": 1783051845.638075,
+    "hash": "8d065c09493e8241267ab14405e71156"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/MissionEditor.tsx": {
+    "mtime": 1783074330.4718766,
+    "hash": "73019c676f614e180af4104d5d0dd5b0"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/MissionOverlay.tsx": {
+    "mtime": 1783074330.4720137,
+    "hash": "476c24b7e08a2b11fa151bea09d8749b"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/MissionControls.tsx": {
+    "mtime": 1783074330.4717014,
+    "hash": "ae1c474b44042ad5a4ae7c5d6cf6ce7b"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/VehicleMap.tsx": {
+    "mtime": 1783074330.4723053,
+    "hash": "3adfaca082fc933eb3d97a1a7c019958"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/GhostPanel.tsx": {
+    "mtime": 1783074330.4715552,
+    "hash": "a8240b4a8d93230ba1b0a587702b8587"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/ArmSlider.tsx": {
+    "mtime": 1783051845.6376784,
+    "hash": "8227b5eb0276052b8dbfe6a9c04d8088"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/FlightControls.tsx": {
+    "mtime": 1783051845.6378932,
+    "hash": "8b6b9c95c2299051b7e85d0b2fe2080f"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/AlertsPanel.tsx": {
+    "mtime": 1783074330.4712427,
+    "hash": "116eca799f32010fd948f2d88e54da5b"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/GhostDraftOverlay.tsx": {
+    "mtime": 1783074330.4713886,
+    "hash": "3afd3a11278203b1aecdf9c404821027"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/instruments/StatusChips.tsx": {
+    "mtime": 1783051845.638768,
+    "hash": "29839bc9467d8666c46a0efc47f7cd8f"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/instruments/AttitudeIndicator.tsx": {
+    "mtime": 1783051845.6384377,
+    "hash": "92886231b6044d4962a9e06da62e7200"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/instruments/Hsi.tsx": {
+    "mtime": 1783074330.472532,
+    "hash": "e1a723e54cddfee5d1318a6e21965ce5"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/components/instruments/Tapes.tsx": {
+    "mtime": 1783051845.6389189,
+    "hash": "edf557d3d674e78eb5f68d3a016f52f7"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/hooks/useTelemetry.ts": {
+    "mtime": 1783074330.4726987,
+    "hash": "311a754ba334a0307752f5484f998e00"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/ghost.ts": {
+    "mtime": 1783074330.4737122,
+    "hash": "fcefda791c56a23c427933fde09b2b95"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/mission-controls.ts": {
+    "mtime": 1783074330.473856,
+    "hash": "e03862ca732949317354cf6279ee36ca"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/mission.ts": {
+    "mtime": 1783074330.4740071,
+    "hash": "89089673dfb4b656cf672b458fe25574"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/ws.ts": {
+    "mtime": 1783074330.4743352,
+    "hash": "cfc9793251820eac641fce212198ab88"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/types.ts": {
+    "mtime": 1783074330.4741569,
+    "hash": "b4fa1f70bb249dd15749d860de1e95e6"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/format.ts": {
+    "mtime": 1783051845.6400616,
+    "hash": "7bc340eee7b6551f5b384e655d057a66"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/controls.ts": {
+    "mtime": 1783051845.6399434,
+    "hash": "cfa61aecc683a97dd92c35f5d36db1b5"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/alerts.ts": {
+    "mtime": 1783074330.4735587,
+    "hash": "eb4293c0ab91a62f4d3f7c3ed4fb41a2"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/mission-controls.test.ts": {
+    "mtime": 1783074330.4731288,
+    "hash": "0045a8ef394856690f45e7297081870d"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/attitude-indicator-geometry.test.ts": {
+    "mtime": 1783051845.6393528,
+    "hash": "afb5e766add8ff0d3b29634faef367f2"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/mission.test.ts": {
+    "mtime": 1783074330.4733016,
+    "hash": "a8f96ccc8408180d815497e76d00b6a1"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/controls.test.ts": {
+    "mtime": 1783051845.6395404,
+    "hash": "4fe8fdb3ea32aa573cee9b7c99602fc3"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/ghost.test.ts": {
+    "mtime": 1783074330.4729905,
+    "hash": "687071341add89fbe18d10525ce46f2a"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/format.test.ts": {
+    "mtime": 1783051845.63967,
+    "hash": "657207ac849fcd548de8f364804090d7"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/alerts.test.ts": {
+    "mtime": 1783074330.4728427,
+    "hash": "e13f66bff5f8fe81f5cfc025cc79df03"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/src/lib/__tests__/ws.test.ts": {
+    "mtime": 1783074330.4734557,
+    "hash": "88223418bc9b5d9bcb2f2743541169fc"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/vitest.config.ts": {
+    "mtime": 1783051845.6439812,
+    "hash": "c2ca0fef33283815b6e456d921a8a013"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/scripts/live-mission-test.ts": {
+    "mtime": 1783074330.4745128,
+    "hash": "36ec81a8fed9d85558f1071890169cf5"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/scripts/probe-sitl.ts": {
+    "mtime": 1783051845.641002,
+    "hash": "0b0b1bd726ddac409e0c324539909a58"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/index.ts": {
+    "mtime": 1783074330.4760594,
+    "hash": "2c99f2007863a16d9714336a5cf48d33"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/config.ts": {
+    "mtime": 1783051845.6417327,
+    "hash": "bad389998f31aa81440192599110c1c0"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/model.ts": {
+    "mtime": 1783074330.4768572,
+    "hash": "1c10279a475da91df2c2965bbb7fa6c3"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/protocol.ts": {
+    "mtime": 1783074330.4769921,
+    "hash": "98c4af396d961861db25185c5161cf0c"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/survey.ts": {
+    "mtime": 1783074330.4771638,
+    "hash": "7c8315cd95cbdf3e8923a1242c810372"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/__tests__/model.test.ts": {
+    "mtime": 1783074330.476286,
+    "hash": "77d6683aa7a122ee3267b7eab451976a"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/__tests__/protocol.int.test.ts": {
+    "mtime": 1783074330.4764974,
+    "hash": "e63dbf6754dbe9997d4face0263ca9db"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/missions/__tests__/survey.test.ts": {
+    "mtime": 1783074330.4767199,
+    "hash": "a94939d73cbd022fb9a6608b460a6ac0"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/state/telemetry.ts": {
+    "mtime": 1783051845.6430995,
+    "hash": "3a37d7bb91f01032063eeda1efc9e35a"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/state/__tests__/telemetry.test.ts": {
+    "mtime": 1783051845.6429625,
+    "hash": "cf6092575427e5c1007bdbec1170bc8f"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/watchdog/rules.ts": {
+    "mtime": 1783074330.4775124,
+    "hash": "be3993f9a2023f5b8c1dba7d57946390"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/watchdog/__tests__/rules.test.ts": {
+    "mtime": 1783074330.4773903,
+    "hash": "8404254386c339f2821f7a5a27723728"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/__tests__/config.test.ts": {
+    "mtime": 1783051845.6411986,
+    "hash": "ae57ee1daad60e1b95d46ca4bc88278f"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ai/features.ts": {
+    "mtime": 1783074330.4753757,
+    "hash": "11507435645984eec9f869c59b3089ef"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ai/claude.ts": {
+    "mtime": 1783074330.4752207,
+    "hash": "38bbe4813b2a10a9818794d160b9c757"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ai/__tests__/features.test.ts": {
+    "mtime": 1783074330.4750824,
+    "hash": "e2efb3ab2f39ca560822b0219318f946"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ai/__tests__/claude.smoke.test.ts": {
+    "mtime": 1783074330.4747274,
+    "hash": "363cbc6c549f63a4fe90cb8b3fdc6411"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ai/__tests__/claude.test.ts": {
+    "mtime": 1783074330.4749308,
+    "hash": "79b101c2ef3eb71aace52f245cf67ebc"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/mavlink/registry.ts": {
+    "mtime": 1783051845.6427414,
+    "hash": "192e047c247b5d5a2b98174111b77f6c"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/mavlink/link.ts": {
+    "mtime": 1783051845.642572,
+    "hash": "4b2082796f81102af8d83d28e6b0ec19"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/mavlink/__tests__/link.test.ts": {
+    "mtime": 1783051845.6422138,
+    "hash": "7fde2f0765f4073be2f85593cef6bfd9"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/mavlink/__tests__/registry.test.ts": {
+    "mtime": 1783051845.6423626,
+    "hash": "a36347aa8b99e1a7156d14303b6a87ba"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/commands/commands.ts": {
+    "mtime": 1783074330.4758685,
+    "hash": "79c5a448f6f753b20790d958fd4a5dad"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/commands/__tests__/commands.test.ts": {
+    "mtime": 1783074330.4756753,
+    "hash": "fe2d9aca37dfd6165ac2fafebfb1c7a6"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ws/schema.ts": {
+    "mtime": 1783074330.4781933,
+    "hash": "f11058597fa98934aa8dc1be7cdc3325"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ws/server.ts": {
+    "mtime": 1783074330.4783616,
+    "hash": "b6f14ae32009ea7f6e9fd55b201dae02"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ws/__tests__/schema.test.ts": {
+    "mtime": 1783074330.4776952,
+    "hash": "a0c2f54a4e8fbd0d0c63c4d9e13bdcf9"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/bridge/src/ws/__tests__/server.test.ts": {
+    "mtime": 1783074330.4779606,
+    "hash": "4ac011b0df01ff53c28a4466efe537cb"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/README.md": {
+    "mtime": 1783074330.470888,
+    "hash": "088a4d5ff8a1a92693e20aa7d176a456"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/pnpm-workspace.yaml": {
+    "mtime": 1783052131.2189128,
+    "hash": "5313965af3d0b9456ccc7be4c5466d25"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/app/README.md": {
+    "mtime": 1783052131.2178714,
+    "hash": "905448bb37a549b9f227744a05b2587c"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/RUNBOOK.md": {
+    "mtime": 1783074330.478592,
+    "hash": "ce45c5d1475e541546a09828f703e15c"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/research/2026-07-03-hardware-landscape.md": {
+    "mtime": 1783051845.6443338,
+    "hash": "ea1546d9144e740847ccb00809a810ce"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/superpowers/plans/2026-07-03-p1-missions-and-advisory.md": {
+    "mtime": 1783052208.1487343,
+    "hash": "a0b8379adebe48c404b2dabb765ecc9a"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/superpowers/plans/2026-07-03-p1-missions-and-copilot.md": {
+    "mtime": 1783052359.1379297,
+    "hash": "3c624915817d7d51ce153f1e3fa44bcf"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/superpowers/plans/2026-07-03-p0-foundations.md": {
+    "mtime": 1783052131.2185252,
+    "hash": "3368cc8742241e87fe4c7df7bc99b765"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/superpowers/specs/2026-07-03-falcon-gcs-design.md": {
+    "mtime": 1783052131.2186897,
+    "hash": "c64e0f8977e907b6a3808c1085edf041"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/sim/README.md": {
+    "mtime": 1783052131.2190573,
+    "hash": "a0a53b361139af9f76075b72516cbd19"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/screenshots/ghost-inflight.png": {
+    "mtime": 1783091217.9080732,
+    "hash": "0c34d3be2e460cdf279c47beee03779f"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/screenshots/ghost-full.png": {
+    "mtime": 1783091111.3007138,
+    "hash": "6893a828577a8c19444273c8a881c491"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/screenshots/ghost-copilot.png": {
+    "mtime": 1783091387.1610973,
+    "hash": "b38b6c04560dd664071db1038d4e6fa8"
+  },
+  "/Users/ahmadsharaf/Desktop/projects/_personal/ghost-gcs/docs/screenshots/ghost-tall.png": {
+    "mtime": 1783091244.441782,
+    "hash": "3389177e604c1544f16d56aeb96b3fca"
+  }
+}
