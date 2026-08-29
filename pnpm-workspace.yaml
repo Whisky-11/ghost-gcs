@@ -12,7 +12,17 @@ ignoredBuiltDependencies:
 
 # Dual-write of the root package.json's `pnpm.overrides` — pnpm 9.12 (this
 # repo's pinned version) reads overrides from package.json; pnpm 10 moved
-# the field here. Keep both in sync until we bump pnpm.
+# the field here. KEEP BOTH IN SYNC until we bump pnpm — deleting either half
+# silently drops the pins (it took audit 20 -> 25 when tried).
+#
+# RESIDUAL: one dev-only advisory survives. minimatch@3.1.5 (via
+# eslint > @eslint/config-array) pins brace-expansion ^1.1.7 and the override
+# does not reach that path even with --force. It is devDependencies-only, so
+# nothing shipped is exposed. Revisit when eslint drops minimatch@3.
 overrides:
-  xml2js: ^0.6.2
-  postcss: ^8.5.10
+  xml2js: "^0.6.2"
+  postcss: ">=8.5.23"
+  brace-expansion: ">=1.1.18"
+  js-yaml: ">=4.3.1"
+  nanoid: ">=3.3.16"
+  sharp: ">=0.35.0"
