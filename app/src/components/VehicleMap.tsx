@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
-import maplibregl, { type GeoJSONSource } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { LatLng, Mission, MissionItem, RpcMethod, RpcParams, TelemetryState } from '@/lib/types'
 import { TAKEOFF_ALT_DEFAULT } from '@/lib/controls'
